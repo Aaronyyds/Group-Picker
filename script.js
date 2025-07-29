@@ -1,101 +1,52 @@
 let spinning = false;
 let spinInterval;
-let windowsEntries = [];
+let windowEntries = [];
 
-// Fetch CSV from GitHub Pages
 fetch('https://aaronyyds.github.io/Group-Picker/sample.csv')
-  .then(response => response.text())
-  .then(data => {
-    const lines = data.trim().split('\n');
-    const headers = lines[0].split(',');
-    windowsEntries = lines.slice(1).map(line => {
-      const [name, role, level] = line.split(',');
-      return { name: name.trim(), role: role.trim(), level: level.trim() };
+    .then(response => response.text())
+    .then(data => {
+        windowEntries = data.split('\n').map(line => line.trim()).filter(line => line);
     });
-  });
 
 function startSpinning() {
-  const groupCount = parseInt(document.getElementById('groupCount').value);
-  const perGroup = parseInt(document.getElementById('perGroup').value);
-  const totalNeeded = groupCount * perGroup;
+    const groupCount = parseInt(document.getElementById('groupCount').value);
+    const perGroup = parseInt(document.getElementById('perGroup').value);
+    const totalNeeded = groupCount * perGroup;
 
-  if (!windowsEntries || windowsEntries.length < totalNeeded) {
-    alert("无法在条目尝试中生成满足条件的分组。");
-    return;
-  }
-
-  spinning = true;
-
-  // Clear all groups
-  const container = document.getElementById('groupsContainer');
-  container.innerHTML = '';
-  for (let i = 0; i < groupCount; i++) {
-    const div = document.createElement('div');
-    div.className = 'groupBox';
-    div.id = `group-${i}`;
-    container.appendChild(div);
-  }
-
-  spinInterval = setInterval(() => {
-    const tempEntries = [...windowsEntries];
-    const groups = [];
-
-    for (let i = 0; i < groupCount; i++) {
-      groups.push([]);
-      for (let j = 0; j < perGroup; j++) {
-        const randIndex = Math.floor(Math.random() * tempEntries.length);
-        groups[i].push(tempEntries.splice(randIndex, 1)[0]);
-      }
+    if (!windowEntries || windowEntries.length < totalNeeded) {
+        alert("样本数量不足，请检查 sample.csv 中是否有足够数据。");
+        return;
     }
 
+    const output = document.getElementById('output');
+    output.innerHTML = '';
+
+    // Create placeholders for boxes
     for (let i = 0; i < groupCount; i++) {
-      const groupDiv = document.getElementById(`group-${i}`);
-      groupDiv.innerHTML = groups[i].map(e => e.name).join('<br>');
+        const box = document.createElement('div');
+        box.className = 'group-box';
+        box.id = `group-${i}`;
+        box.innerHTML = `<strong>第 ${i + 1} 组</strong><ul>${'<li>🎲</li>'.repeat(perGroup)}</ul>`;
+        output.appendChild(box);
     }
-  }, 100);
+
+    spinning = true;
+
+    spinInterval = setInterval(() => {
+        const shuffled = [...windowEntries].sort(() => Math.random() - 0.5);
+        for (let i = 0; i < groupCount; i++) {
+            const groupBox = document.getElementById(`group-${i}`);
+            const names = shuffled.slice(i * perGroup, (i + 1) * perGroup);
+            groupBox.innerHTML = `<strong>第 ${i + 1} 组</strong><ul>${
+                names.map(name => `<li>${name}</li>`).join('')
+            }</ul>`;
+        }
+    }, 100);
 }
 
 function stopSpinning() {
-  spinning = false;
-  clearInterval(spinInterval);
-
-  const groupCount = parseInt(document.getElementById('groupCount').value);
-  const perGroup = parseInt(document.getElementById('perGroup').value);
-  const totalNeeded = groupCount * perGroup;
-
-  let validGroups = [];
-  for (let attempt = 0; attempt < 1000; attempt++) {
-    const shuffled = [...windowsEntries].sort(() => 0.5 - Math.random());
-    const candidate = [];
-    let valid = true;
-
-    for (let i = 0; i < groupCount; i++) {
-      const group = shuffled.slice(i * perGroup, (i + 1) * perGroup);
-      const levels = group.map(e => e.level);
-      if (!(levels.includes("Senior") && levels.includes("Junior"))) {
-        valid = false;
-        break;
-      }
-      candidate.push(group);
+    if (spinning) {
+        clearInterval(spinInterval);
+        spinning = false;
     }
-
-    if (valid) {
-      validGroups = candidate;
-      break;
-    }
-  }
-
-  if (validGroups.length === 0) {
-    alert("无法在多次尝试中生成满足条件的分组。");
-    return;
-  }
-
-  const container = document.getElementById('groupsContainer');
-  container.innerHTML = '';
-  validGroups.forEach((group, idx) => {
-    const div = document.createElement('div');
-    div.className = 'groupBox';
-    div.innerHTML = `<strong>Group ${idx + 1}</strong><br>` + group.map(e => e.name).join('<br>');
-    container.appendChild(div);
-  });
 }
