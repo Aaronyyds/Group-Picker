@@ -2,7 +2,7 @@ let spinning = false;
 let spinInterval;
 let windowEntries = [];
 
-fetch('sample.csv')
+fetch('https://aaronyyds.github.io/Group-Picker/sample.csv')
     .then(response => response.text())
     .then(data => {
         windowEntries = data.split('\n').map(line => line.trim()).filter(line => line);
@@ -18,24 +18,35 @@ function startSpinning() {
         return;
     }
 
+    const output = document.getElementById('output');
+    output.innerHTML = '';
+
+    // Create placeholders for boxes
+    for (let i = 0; i < groupCount; i++) {
+        const box = document.createElement('div');
+        box.className = 'group-box';
+        box.id = `group-${i}`;
+        box.innerHTML = `<strong>第 ${i + 1} 组</strong><ul>${'<li>🎲</li>'.repeat(perGroup)}</ul>`;
+        output.appendChild(box);
+    }
+
     spinning = true;
+
     spinInterval = setInterval(() => {
         const shuffled = [...windowEntries].sort(() => Math.random() - 0.5);
-        const output = document.getElementById('output');
-        output.innerHTML = '';
-
         for (let i = 0; i < groupCount; i++) {
-            const box = document.createElement('div');
-            box.className = 'group-box';
-            box.innerHTML = `<strong>第 ${i + 1} 组</strong><ul>${
-                shuffled.slice(i * perGroup, (i + 1) * perGroup).map(name => `<li>${name}</li>`).join('')
+            const groupBox = document.getElementById(`group-${i}`);
+            const names = shuffled.slice(i * perGroup, (i + 1) * perGroup);
+            groupBox.innerHTML = `<strong>第 ${i + 1} 组</strong><ul>${
+                names.map(name => `<li>${name}</li>`).join('')
             }</ul>`;
-            output.appendChild(box);
         }
-    }, 100); // Change every 0.1s
+    }, 100);
 }
 
 function stopSpinning() {
-    spinning = false;
-    clearInterval(spinInterval);
+    if (spinning) {
+        clearInterval(spinInterval);
+        spinning = false;
+    }
 }
