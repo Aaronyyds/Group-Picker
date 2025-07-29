@@ -1,37 +1,54 @@
-// Load CSV from GitHub Pages
-fetch('https://aaronyyds.github.io/Group-Picker/sample.csv')
-  .then(response => {
-    if (!response.ok) throw new Error("CSV not found");
-    return response.text();
-  })
-  .then(data => {
-    window.entries = data.split('\n').map(line => line.trim()).filter(line => line);
-  })
-  .catch(error => {
-    console.error("CSV fetch error:", error);
-    alert("Failed to load sample.csv");
-  });
+let spinning = false;
+let spinInterval;
+let windowsEntries = [];
 
-function generateGroups() {
+fetch('sample.csv')
+    .then(response => response.text())
+    .then(data => {
+        windowsEntries = data.split('\n').map(line => line.trim()).filter(line => line);
+    });
+
+function startSpinning() {
     const groupCount = parseInt(document.getElementById('groupCount').value);
     const perGroup = parseInt(document.getElementById('perGroup').value);
-    const totalNeeded = groupCount * perGroup;
+    const output = document.getElementById('output');
+    output.innerHTML = '';
 
-    if (!window.entries || window.entries.length < totalNeeded) {
+    if (!windowsEntries || windowsEntries.length < groupCount * perGroup) {
         alert("样本数量不足，请检查 sample.csv 中是否有足够数据。");
         return;
     }
 
-    const shuffled = [...window.entries].sort(() => Math.random() - 0.5);
-    const output = document.getElementById('output');
-    output.innerHTML = '';
+    spinning = true;
 
+    // Create group boxes
     for (let i = 0; i < groupCount; i++) {
         const box = document.createElement('div');
-        box.className = 'group-box spin-animate';
-        box.innerHTML = `<strong>第 ${i + 1} 组</strong><ul>${
-            shuffled.slice(i * perGroup, (i + 1) * perGroup).map(name => `<li>${name}</li>`).join('')
-        }</ul>`;
+        box.className = 'group-box';
+        box.id = `group-${i}`;
+        box.innerHTML = `<strong>第 ${i + 1} 组</strong><ul></ul>`;
         output.appendChild(box);
+    }
+
+    // Start interval that changes content every 100ms
+    spinInterval = setInterval(() => {
+        for (let i = 0; i < groupCount; i++) {
+            const ul = document.querySelector(`#group-${i} ul`);
+            ul.innerHTML = '';
+            const tempShuffle = [...windowsEntries].sort(() => Math.random() - 0.5);
+            for (let j = 0; j < perGroup; j++) {
+                const li = document.createElement('li');
+                li.textContent = tempShuffle[j];
+                ul.appendChild(li);
+            }
+        }
+    }, 100);
+}
+
+function stopSpinning() {
+    if (spinInterval) {
+        clearInterval(spinInterval);
+        spinInterval = null;
+        spinning = false;
     }
 }
