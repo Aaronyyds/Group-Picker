@@ -1,8 +1,9 @@
-
-fetch('sample.csv')
+// Auto-load CSV from your GitHub Pages
+fetch('https://aaronyyds.github.io/Group-Picker/sample.csv')
     .then(response => response.text())
     .then(data => {
-        window.entries = data.split('\n').map(line => line.trim()).filter(line => line);
+        // Assumes first row is header (skip it)
+        window.entries = data.split('\n').slice(1).map(line => line.trim()).filter(line => line);
     });
 
 function generateGroups() {
