@@ -2,10 +2,20 @@ let spinning = false;
 let spinInterval;
 let windowEntries = [];
 
+// fetch('https://aaronyyds.github.io/Group-Picker/sample.csv')
+//     .then(response => response.text())
+//     .then(data => {
+//         windowEntries = data.split('\n').map(line => line.trim()).filter(line => line);
+//     });
+
 fetch('https://aaronyyds.github.io/Group-Picker/sample.csv')
     .then(response => response.text())
     .then(data => {
-        windowEntries = data.split('\n').map(line => line.trim()).filter(line => line);
+        windowEntries = data
+            .split('\n')
+            .slice(1)
+            .map(line => line.split(',')[0].trim())
+            .filter(name => name);
     });
 
 function startSpinning() {
