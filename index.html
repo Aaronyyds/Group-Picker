@@ -1,46 +1,29 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Group Picker</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <title>Group Picker</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>Group Picker</h1>
-    <p>Web app to randomly select CSV entries per group</p>
+  <h1>Group Picker</h1>
+  <p>Web app to randomly select CSV entries per group</p>
 
-    <label for="groupCount">Number of Groups:</label>
-    <select id="groupCount">
-        <option value="2">2</option>
-        <option value="3" selected>3</option>
-        <option value="4">4</option>
-        <option value="5">5</option>
-        <option value="6">6</option>
-        <option value="7">7</option>
-        <option value="8">8</option>
-        <option value="9">9</option>
-        <option value="10">10</option>
-    </select>
+  <label for="groupCount">Number of Groups:</label>
+  <select id="groupCount">
+    <option>1</option><option>2</option><option>3</option><option>4</option>
+  </select>
 
-    <label for="perGroup">Entries per Group:</label>
-    <select id="perGroup">
-        <option value="1">1</option>
-        <option value="2" selected>2</option>
-        <option value="3">3</option>
-        <option value="4">4</option>
-        <option value="5">5</option>
-        <option value="6">6</option>
-        <option value="7">7</option>
-        <option value="8">8</option>
-        <option value="9">9</option>
-        <option value="10">10</option>
-    </select>
+  <label for="perGroup">Entries per Group:</label>
+  <select id="perGroup">
+    <option>1</option><option>2</option><option>3</option><option>4</option>
+  </select>
 
-    <button onclick="startSpinning()">Start</button>
-    <button onclick="stopSpinning()">Stop</button>
+  <button onclick="startSpinning()">Generate Groups</button>
+  <button onclick="stopSpinning()">Stop</button>
 
-    <div id="output"></div>
+  <div id="output"></div>
 
-    <script src="script.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
