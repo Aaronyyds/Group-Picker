@@ -24,3 +24,13 @@ button {
     width: 300px;
     background-color: #f9f9f9;
 }
+@keyframes spin {
+    0% { transform: rotateY(0deg); }
+    50% { transform: rotateY(180deg); }
+    100% { transform: rotateY(360deg); }
+}
+
+.spin-animate {
+    animation: spin 0.8s ease-in-out;
+    transform-style: preserve-3d;
+}
