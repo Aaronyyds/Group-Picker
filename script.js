@@ -104,7 +104,7 @@
             }
 
             // 80% chance to flip to the other role
-            if (Math.random() < 0.99) {
+            if (Math.random() < 0.8) {
               currentRole = currentRole === 'sourcing' ? 'buyer' : 'sourcing';
             }
           }
