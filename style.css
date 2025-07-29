@@ -23,7 +23,9 @@ button {
     margin: 15px 0;
     width: 300px;
     background-color: #f9f9f9;
+    transition: transform 0.8s ease-in-out;
 }
+
 @keyframes spin {
     0% { transform: rotateY(0deg); }
     50% { transform: rotateY(180deg); }
