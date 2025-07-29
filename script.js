@@ -1,10 +1,16 @@
 // Load CSV from GitHub Pages
 fetch('https://aaronyyds.github.io/Group-Picker/sample.csv')
-    .then(response => response.text())
-    .then(data => {
-        // Skip the header and prepare the data
-        window.entries = data.split('\n').slice(1).map(line => line.trim()).filter(line => line);
-    });
+  .then(response => {
+    if (!response.ok) throw new Error("CSV not found");
+    return response.text();
+  })
+  .then(data => {
+    window.entries = data.split('\n').map(line => line.trim()).filter(line => line);
+  })
+  .catch(error => {
+    console.error("CSV fetch error:", error);
+    alert("Failed to load sample.csv");
+  });
 
 function generateGroups() {
     const groupCount = parseInt(document.getElementById('groupCount').value);
@@ -22,13 +28,10 @@ function generateGroups() {
 
     for (let i = 0; i < groupCount; i++) {
         const box = document.createElement('div');
-        box.className = 'group-box spin-animate'; // Add spin class
+        box.className = 'group-box spin-animate';
         box.innerHTML = `<strong>第 ${i + 1} 组</strong><ul>${
             shuffled.slice(i * perGroup, (i + 1) * perGroup).map(name => `<li>${name}</li>`).join('')
         }</ul>`;
         output.appendChild(box);
-
-        // Remove the animation class after it finishes so it can replay next time
-        setTimeout(() => box.classList.remove('spin-animate'), 1000);
     }
 }
