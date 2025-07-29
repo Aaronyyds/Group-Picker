@@ -1,84 +1,101 @@
 let spinning = false;
 let spinInterval;
-let windowEntries = [];
+let windowsEntries = [];
 
+// Fetch CSV from GitHub Pages
 fetch('https://aaronyyds.github.io/Group-Picker/sample.csv')
-    .then(response => response.text())
-    .then(data => {
-        const lines = data.split('\n').map(line => line.trim()).filter(line => line && !line.startsWith('Name'));
-        windowEntries = lines.map(line => {
-            const [name, role, level] = line.split(',');
-            return { name, role, level };
-        });
+  .then(response => response.text())
+  .then(data => {
+    const lines = data.trim().split('\n');
+    const headers = lines[0].split(',');
+    windowsEntries = lines.slice(1).map(line => {
+      const [name, role, level] = line.split(',');
+      return { name: name.trim(), role: role.trim(), level: level.trim() };
     });
-
-function shuffleArray(array) {
-    return array.sort(() => Math.random() - 0.5);
-}
-
-function groupHasDiversity(group) {
-    const roles = new Set(group.map(p => p.role));
-    const levels = new Set(group.map(p => p.level));
-    return roles.size >= 2 && levels.size >= 2;
-}
-
-function generateGroupsWithDiversity(groupCount, perGroup) {
-    const totalNeeded = groupCount * perGroup;
-    let attempts = 0;
-
-    while (attempts < 1000) {
-        const shuffled = shuffleArray([...windowEntries]);
-        const groups = [];
-        let valid = true;
-
-        for (let i = 0; i < groupCount; i++) {
-            const group = shuffled.slice(i * perGroup, (i + 1) * perGroup);
-            groups.push(group);
-        }
-
-        // Ensure 80% of groups meet diversity condition
-        const diverseGroups = groups.filter(groupHasDiversity);
-        if (diverseGroups.length >= Math.floor(0.8 * groupCount)) {
-            return groups;
-        }
-
-        attempts++;
-    }
-
-    alert("无法在多次尝试中生成满足条件的分组。");
-    return null;
-}
+  });
 
 function startSpinning() {
-    const groupCount = parseInt(document.getElementById('groupCount').value);
-    const perGroup = parseInt(document.getElementById('perGroup').value);
-    const totalNeeded = groupCount * perGroup;
+  const groupCount = parseInt(document.getElementById('groupCount').value);
+  const perGroup = parseInt(document.getElementById('perGroup').value);
+  const totalNeeded = groupCount * perGroup;
 
-    if (windowEntries.length < totalNeeded) {
-        alert("样本数量不足，请检查 CSV 数据。");
-        return;
+  if (!windowsEntries || windowsEntries.length < totalNeeded) {
+    alert("无法在条目尝试中生成满足条件的分组。");
+    return;
+  }
+
+  spinning = true;
+
+  // Clear all groups
+  const container = document.getElementById('groupsContainer');
+  container.innerHTML = '';
+  for (let i = 0; i < groupCount; i++) {
+    const div = document.createElement('div');
+    div.className = 'groupBox';
+    div.id = `group-${i}`;
+    container.appendChild(div);
+  }
+
+  spinInterval = setInterval(() => {
+    const tempEntries = [...windowsEntries];
+    const groups = [];
+
+    for (let i = 0; i < groupCount; i++) {
+      groups.push([]);
+      for (let j = 0; j < perGroup; j++) {
+        const randIndex = Math.floor(Math.random() * tempEntries.length);
+        groups[i].push(tempEntries.splice(randIndex, 1)[0]);
+      }
     }
 
-    spinning = true;
-    spinInterval = setInterval(() => {
-        const groups = generateGroupsWithDiversity(groupCount, perGroup);
-        if (!groups) return;
-
-        const output = document.getElementById('output');
-        output.innerHTML = '';
-
-        groups.forEach((group, i) => {
-            const box = document.createElement('div');
-            box.className = 'group-box spin-animate';
-            box.innerHTML = `<strong>第 ${i + 1} 组</strong><ul>${
-                group.map(p => `<li>${p.name} (${p.role}, ${p.level})</li>`).join('')
-            }</ul>`;
-            output.appendChild(box);
-        });
-    }, 100);
+    for (let i = 0; i < groupCount; i++) {
+      const groupDiv = document.getElementById(`group-${i}`);
+      groupDiv.innerHTML = groups[i].map(e => e.name).join('<br>');
+    }
+  }, 100);
 }
 
 function stopSpinning() {
-    spinning = false;
-    clearInterval(spinInterval);
+  spinning = false;
+  clearInterval(spinInterval);
+
+  const groupCount = parseInt(document.getElementById('groupCount').value);
+  const perGroup = parseInt(document.getElementById('perGroup').value);
+  const totalNeeded = groupCount * perGroup;
+
+  let validGroups = [];
+  for (let attempt = 0; attempt < 1000; attempt++) {
+    const shuffled = [...windowsEntries].sort(() => 0.5 - Math.random());
+    const candidate = [];
+    let valid = true;
+
+    for (let i = 0; i < groupCount; i++) {
+      const group = shuffled.slice(i * perGroup, (i + 1) * perGroup);
+      const levels = group.map(e => e.level);
+      if (!(levels.includes("Senior") && levels.includes("Junior"))) {
+        valid = false;
+        break;
+      }
+      candidate.push(group);
+    }
+
+    if (valid) {
+      validGroups = candidate;
+      break;
+    }
+  }
+
+  if (validGroups.length === 0) {
+    alert("无法在多次尝试中生成满足条件的分组。");
+    return;
+  }
+
+  const container = document.getElementById('groupsContainer');
+  container.innerHTML = '';
+  validGroups.forEach((group, idx) => {
+    const div = document.createElement('div');
+    div.className = 'groupBox';
+    div.innerHTML = `<strong>Group ${idx + 1}</strong><br>` + group.map(e => e.name).join('<br>');
+    container.appendChild(div);
+  });
 }
