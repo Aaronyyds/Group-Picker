@@ -2,7 +2,7 @@ let spinning = false;
 let spinInterval;
 let windowEntries = [];
 
-fetch('https://aaronyyds.github.io/Group-Picker/sample.csv')
+fetch('https://aaronyyds.github.io/Group-Picker/sample.csv?nocache=' + new Date().getTime())
   .then(response => response.text())
   .then(data => {
     windowEntries = data
