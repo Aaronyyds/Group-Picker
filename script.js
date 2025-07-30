@@ -99,7 +99,7 @@ function startSpinning() {
     if (enough) {
       for (let i = 0; i < groupCount; i++) {
         const groupBox = document.getElementById(`group-${i}`);
-        groupBox.innerHTML = `<strong>第 ${i + 1} 组</strong><ul>${
+        groupBox.innerHTML = `<strong>Group ${i + 1} </strong><ul>${
           groups[i].map(p => `<li>${p.name}</li>`).join('')
         }</ul>`;
       }
