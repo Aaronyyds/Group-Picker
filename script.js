@@ -1,23 +1,51 @@
-let spinning = false;
-let spinInterval;
-let windowEntries = [];
+let finalGroups = [];
 
-fetch('https://aaronyyds.github.io/Group-Picker/sample.csv?nocache=' + new Date().getTime())
-  .then(response => response.text())
-  .then(data => {
-    windowEntries = data
-      .split('\n')
-      .slice(1)
-      .map(line => {
-        const [name, role, level] = line.split(',');
-        return {
-          name: name?.trim(),
-          role: role?.trim().toLowerCase(),
-          level: level?.trim().toLowerCase()
-        };
-      })
-      .filter(entry => entry.name && entry.role && entry.level);
-  });
+function generateGroups() {
+  const sourcingPool = windowEntries.filter(p => p.role === 'sourcing');
+  const buyerPool = windowEntries.filter(p => p.role === 'buyer');
+
+  const shuffle = arr => [...arr].sort(() => Math.random() - 0.5);
+  let sourcing = shuffle(sourcingPool);
+  let buyer = shuffle(buyerPool);
+
+  const groups = [];
+  let sourcingIndex = 0;
+  let buyerIndex = 0;
+  let enough = true;
+
+  for (let i = 0; i < groupCount; i++) {
+    const group = [];
+    let currentRole = Math.random() < 0.5 ? 'sourcing' : 'buyer';
+    let currentLevel = Math.random() < 0.5 ? 'senior' : 'junior';
+
+    for (let j = 0; j < perGroup; j++) {
+      let pool = currentRole === 'sourcing' ? sourcing : buyer;
+      let index = currentRole === 'sourcing' ? sourcingIndex : buyerIndex;
+
+      let personIndex = pool.findIndex(p => p.level === currentLevel);
+      if (personIndex === -1) {
+        if (index >= pool.length) { enough = false; break; }
+        personIndex = 0;
+      }
+
+      const [person] = pool.splice(personIndex, 1);
+      if (!person) { enough = false; break; }
+
+      if (currentRole === 'sourcing') sourcingIndex++;
+      else buyerIndex++;
+
+      group.push(person);
+
+      if (Math.random() < 0.9) currentRole = currentRole === 'sourcing' ? 'buyer' : 'sourcing';
+      if (Math.random() < 0.8) currentLevel = currentLevel === 'senior' ? 'junior' : 'senior';
+    }
+
+    if (!enough) break;
+    groups.push(group);
+  }
+
+  return enough ? groups : [];
+}
 
 function startSpinning() {
   const groupCount = parseInt(document.getElementById('groupCount').value);
@@ -40,76 +68,35 @@ function startSpinning() {
     output.appendChild(box);
   }
 
+  // Generate groups once
+  finalGroups = generateGroups();
+  if (!finalGroups.length) {
+    alert("分组失败，请检查样本分布是否均衡。");
+    return;
+  }
+
   spinning = true;
 
   spinInterval = setInterval(() => {
-    const sourcingPool = windowEntries.filter(p => p.role === 'sourcing');
-    const buyerPool = windowEntries.filter(p => p.role === 'buyer');
-
-    const shuffle = arr => [...arr].sort(() => Math.random() - 0.5);
-    let sourcing = shuffle(sourcingPool);
-    let buyer = shuffle(buyerPool);
-
-    const groups = [];
-    let sourcingIndex = 0;
-    let buyerIndex = 0;
-    let enough = true;
-
     for (let i = 0; i < groupCount; i++) {
-      const group = [];
-      let currentRole = Math.random() < 0.5 ? 'sourcing' : 'buyer';
-      let currentLevel = Math.random() < 0.5 ? 'senior' : 'junior';
-
-      for (let j = 0; j < perGroup; j++) {
-        let pool = currentRole === 'sourcing' ? sourcing : buyer;
-        let index = currentRole === 'sourcing' ? sourcingIndex : buyerIndex;
-
-        // Try to find person matching desired level
-        let personIndex = pool.findIndex(p => p.level === currentLevel);
-
-        // Fallback to anyone if not found
-        if (personIndex === -1) {
-          if (index >= pool.length) { enough = false; break; }
-          personIndex = 0;
-        }
-
-        const [person] = pool.splice(personIndex, 1);
-        if (!person) { enough = false; break; }
-
-        if (currentRole === 'sourcing') sourcingIndex++;
-        else buyerIndex++;
-
-        group.push(person);
-
-        // 90% chance to switch role
-        if (Math.random() < 0.9) {
-          currentRole = currentRole === 'sourcing' ? 'buyer' : 'sourcing';
-        }
-
-        // 80% chance to switch level
-        if (Math.random() < 0.8) {
-          currentLevel = currentLevel === 'senior' ? 'junior' : 'senior';
-        }
-      }
-
-      if (!enough) break;
-      groups.push(group);
+      const groupBox = document.getElementById(`group-${i}`);
+      groupBox.innerHTML = `<strong>第 ${i + 1} 组</strong><ul>${
+        finalGroups[i].map(() => `<li>${Math.random().toString(36).substring(2, 7)}</li>`).join('')
+      }</ul>`;
     }
-
-    if (enough) {
-      for (let i = 0; i < groupCount; i++) {
-        const groupBox = document.getElementById(`group-${i}`);
-        groupBox.innerHTML = `<strong>Group ${i + 1} </strong><ul>${
-          groups[i].map(p => `<li>${p.name}</li>`).join('')
-        }</ul>`;
-      }
-    }
-  }, 100);
+  }, 80); // faster update if desired
 }
 
 function stopSpinning() {
   if (spinning) {
     clearInterval(spinInterval);
     spinning = false;
+
+    for (let i = 0; i < finalGroups.length; i++) {
+      const groupBox = document.getElementById(`group-${i}`);
+      groupBox.innerHTML = `<strong>第 ${i + 1} 组</strong><ul>${
+        finalGroups[i].map(p => `<li>${p.name}</li>`).join('')
+      }</ul>`;
+    }
   }
 }
