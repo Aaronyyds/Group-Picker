@@ -32,13 +32,13 @@ function startSpinning() {
   for (let i = 0; i < groupCount; i++) {
     const box = document.createElement('div');
     box.className = 'group-box';
-    box.id = group-${i};
+    box.id = `group-${i}`;
     let ul = '<ul>';
     for (let j = 0; j < perGroup; j++) {
-      ul += <li id="g${i}-m${j}">🎲</li>;
+      ul += `<li id="g${i}-m${j}">🎲</li>`;
     }
     ul += '</ul>';
-    box.innerHTML = <strong>第 ${i + 1} 组</strong>${ul};
+    box.innerHTML = `<strong>第 ${i + 1} 组</strong>${ul}`;
     output.appendChild(box);
   }
 
@@ -48,7 +48,7 @@ function startSpinning() {
     for (let i = 0; i < groupCount; i++) {
       for (let j = 0; j < perGroup; j++) {
         const randomEntry = windowEntries[Math.floor(Math.random() * windowEntries.length)];
-        const li = document.getElementById(g${i}-m${j});
+        const li = document.getElementById(`g${i}-m${j}`);
         if (li) li.textContent = randomEntry.name;
       }
     }
@@ -72,7 +72,6 @@ function stopSpinning() {
   while (finalGroups.length < groupCount && attempt++ < maxAttempts) {
     const tempGroups = [];
     let usedIndices = new Set();
-
     let success = true;
 
     for (let g = 0; g < groupCount; g++) {
@@ -89,14 +88,14 @@ function stopSpinning() {
           .filter(p => !usedIndices.has(p.idx) && p.role === expectedRole && p.level === expectedLevel);
 
         if (candidates.length === 0) {
-          // Try relaxing to just expectedRole
+          // Relax to expectedRole only
           candidates = windowEntries
             .map((p, idx) => ({ ...p, idx }))
             .filter(p => !usedIndices.has(p.idx) && p.role === expectedRole);
         }
 
         if (candidates.length === 0) {
-          // Fallback: pick any remaining
+          // Final fallback
           candidates = windowEntries
             .map((p, idx) => ({ ...p, idx }))
             .filter(p => !usedIndices.has(p.idx));
@@ -131,7 +130,7 @@ function stopSpinning() {
 
   for (let i = 0; i < groupCount; i++) {
     for (let j = 0; j < perGroup; j++) {
-      const li = document.getElementById(g${i}-m${j});
+      const li = document.getElementById(`g${i}-m${j}`);
       li.textContent = finalGroups[i][j]?.name || 'BLANK';
     }
   }
