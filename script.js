@@ -1,6 +1,7 @@
 let windowEntries = [];
 let spinning = false;
 let spinInterval;
+let dataLoaded = false;
 
 fetch('https://aaronyyds.github.io/Group-Picker/sample.csv?nocache=' + new Date().getTime())
   .then(response => response.text())
@@ -17,6 +18,15 @@ fetch('https://aaronyyds.github.io/Group-Picker/sample.csv?nocache=' + new Date(
         };
       })
       .filter(entry => entry.name && entry.role && entry.level);
+
+    if (windowEntries.length === 0) {
+      alert("⚠️ 无有效数据，请检查 sample.csv");
+    } else {
+      dataLoaded = true;
+    }
+  })
+  .catch(error => {
+    alert("❌ 加载 sample.csv 出错：" + error.message);
   });
 
 function shuffle(arr) {
@@ -24,6 +34,11 @@ function shuffle(arr) {
 }
 
 function startSpinning() {
+  if (!dataLoaded) {
+    alert("⏳ 正在加载数据，请稍候...");
+    return;
+  }
+
   const groupCount = parseInt(document.getElementById('groupCount').value);
   const perGroup = parseInt(document.getElementById('perGroup').value);
   const output = document.getElementById('output');
@@ -49,7 +64,7 @@ function startSpinning() {
       for (let j = 0; j < perGroup; j++) {
         const randomEntry = windowEntries[Math.floor(Math.random() * windowEntries.length)];
         const li = document.getElementById(`g${i}-m${j}`);
-        if (li) li.textContent = randomEntry.name;
+        if (li && randomEntry) li.textContent = randomEntry.name;
       }
     }
   }, 50);
@@ -71,7 +86,6 @@ function stopSpinning() {
   while (attempt++ < maxAttempts) {
     let usedIndices = new Set();
     let groups = [];
-
     let success = true;
 
     for (let g = 0; g < groupCount; g++) {
@@ -104,7 +118,6 @@ function stopSpinning() {
       usedIndices.add(first.idx);
       usedIndices.add(second.idx);
 
-      // Step 2: Fill remaining with intra-group switching
       let lastRole = second.role;
       let lastLevel = second.level;
 
@@ -117,14 +130,12 @@ function stopSpinning() {
           .filter(p => !usedIndices.has(p.idx) && p.role === expectedRole && p.level === expectedLevel);
 
         if (candidates.length === 0) {
-          // Relax condition
           candidates = windowEntries
             .map((p, idx) => ({ ...p, idx }))
             .filter(p => !usedIndices.has(p.idx));
         }
 
         if (candidates.length === 0) {
-          // Fallback to BLANK
           group.push({ name: 'BLANK', role: 'sourcing', level: 'junior' });
         } else {
           const pick = candidates[Math.floor(Math.random() * candidates.length)];
@@ -145,11 +156,11 @@ function stopSpinning() {
   }
 
   if (finalGroups.length !== groupCount) {
-    alert("生成分组失败，请检查样本数据是否足够多样。");
+    alert("❌ 生成分组失败，请检查 sample.csv 数据是否足够。");
     return;
   }
 
-  // Display final
+  // Display result
   for (let i = 0; i < groupCount; i++) {
     for (let j = 0; j < perGroup; j++) {
       const li = document.getElementById(`g${i}-m${j}`);
