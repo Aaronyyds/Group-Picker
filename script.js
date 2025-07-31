@@ -36,8 +36,8 @@ function generateGroups() {
 
       group.push(person);
 
-      if (Math.random() < 0.9) currentRole = currentRole === 'sourcing' ? 'buyer' : 'sourcing';
-      if (Math.random() < 0.8) currentLevel = currentLevel === 'senior' ? 'junior' : 'senior';
+      if (Math.random() < 0.85) currentRole = currentRole === 'sourcing' ? 'buyer' : 'sourcing';
+      if (Math.random() < 0.85) currentLevel = currentLevel === 'senior' ? 'junior' : 'senior';
     }
 
     if (!enough) break;
