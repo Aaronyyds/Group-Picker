@@ -35,8 +35,8 @@ function startSpinning() {
   for (let i = 0; i < groupCount; i++) {
     const box = document.createElement('div');
     box.className = 'group-box';
-    box.id = group-${i};
-    box.innerHTML = <strong>第 ${i + 1} 组</strong><ul>${'<li>🎲</li>'.repeat(perGroup)}</ul>;
+    box.id = `group-${i}`;
+    box.innerHTML = `<strong>第 ${i + 1} 组</strong><ul>${'<li>🎲</li>'.repeat(perGroup)}</ul>`;
     output.appendChild(box);
   }
 
@@ -64,10 +64,8 @@ function startSpinning() {
         let pool = currentRole === 'sourcing' ? sourcing : buyer;
         let index = currentRole === 'sourcing' ? sourcingIndex : buyerIndex;
 
-        // Try to find person matching desired level
         let personIndex = pool.findIndex(p => p.level === currentLevel);
 
-        // Fallback to anyone if not found
         if (personIndex === -1) {
           if (index >= pool.length) { enough = false; break; }
           personIndex = 0;
@@ -81,12 +79,10 @@ function startSpinning() {
 
         group.push(person);
 
-        // 90% chance to switch role
         if (Math.random() < 0.9) {
           currentRole = currentRole === 'sourcing' ? 'buyer' : 'sourcing';
         }
 
-        // 80% chance to switch level
         if (Math.random() < 0.8) {
           currentLevel = currentLevel === 'senior' ? 'junior' : 'senior';
         }
@@ -98,10 +94,10 @@ function startSpinning() {
 
     if (enough) {
       for (let i = 0; i < groupCount; i++) {
-        const groupBox = document.getElementById(group-${i});
-        groupBox.innerHTML = <strong>Group ${i + 1} </strong><ul>${
-          groups[i].map(p => <li>${p.name}</li>).join('')
-        }</ul>;
+        const groupBox = document.getElementById(`group-${i}`);
+        groupBox.innerHTML = `<strong>Group ${i + 1}</strong><ul>${
+          groups[i].map(p => `<li>${p.name}</li>`).join('')
+        }</ul>`;
       }
     }
   }, 100);
