@@ -82,7 +82,7 @@ function stopSpinning() {
 
       for (let m = 0; m < perGroup; m++) {
         let expectedRole = Math.random() < 0.9 ? (localLastRole === 'buyer' ? 'sourcing' : 'buyer') : localLastRole;
-        let expectedLevel = Math.random() < 0.8 ? (localLastLevel === 'junior' ? 'senior' : 'junior') : localLastLevel;
+        let expectedLevel = Math.random() < 0.9 ? (localLastLevel === 'junior' ? 'senior' : 'junior') : localLastLevel;
 
         let candidates = windowEntries
           .map((p, idx) => ({ ...p, idx }))
