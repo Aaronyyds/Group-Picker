@@ -78,7 +78,7 @@ function stopSpinning() {
       // Step 1: Ensure first 2 members together have all 4 traits
       let pairFound = false;
       const candidates = windowEntries.map((p, idx) => ({ ...p, idx }))
-        .filter(p => !usedIndices.has(p.idx) && p.name.toLowerCase() !== 'blank');
+        .filter(p => !usedIndices.has(p.idx));  // no filter on "blank" name
 
       for (let i = 0; i < candidates.length && !pairFound; i++) {
         for (let j = i + 1; j < candidates.length && !pairFound; j++) {
@@ -163,4 +163,3 @@ function stopSpinning() {
     }
   }
 }
-
