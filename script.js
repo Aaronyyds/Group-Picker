@@ -41,7 +41,7 @@ function stopSpinning() {
     for (let g = 0; g < groupCount; g++) {
       let group = [];
 
-      // Step 1: Ensure first 2 members together have all 4 traits
+      // Step 1: Pick first 2 members with all 4 traits (role & level)
       let pairFound = false;
       const candidates = windowEntries.map((p, idx) => ({ ...p, idx }))
         .filter(p => !usedIndices.has(p.idx) && p.name.toLowerCase() !== 'blank');
@@ -54,7 +54,7 @@ function stopSpinning() {
           const roles = new Set([p1.role, p2.role]);
           const levels = new Set([p1.level, p2.level]);
 
-          if (roles.has('buyer') && roles.has('sourcing') && levels.has('senior') && levels.has('junior')) {
+          if (roles.size === 2 && levels.size === 2) {
             group.push(p1, p2);
             usedIndices.add(p1.idx);
             usedIndices.add(p2.idx);
@@ -68,7 +68,7 @@ function stopSpinning() {
         break;
       }
 
-      // Step 2: Fill remaining group members using 0.8 switch logic
+      // Step 2: Fill rest of group with 0.8 switch logic
       let last = group[group.length - 1];
       while (group.length < perGroup) {
         let expectedRole = Math.random() < 0.8 ? (last.role === 'buyer' ? 'sourcing' : 'buyer') : last.role;
