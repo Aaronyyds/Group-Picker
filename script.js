@@ -26,17 +26,9 @@ function shuffle(arr) {
 function startSpinning() {
   const groupCount = parseInt(document.getElementById('groupCount').value);
   const perGroup = parseInt(document.getElementById('perGroup').value);
-  const totalNeeded = groupCount * perGroup;
-
-  if (!windowEntries || windowEntries.length < totalNeeded) {
-    alert("样本数量不足，请检查 sample.csv 中是否有足够数据。");
-    return;
-  }
-
   const output = document.getElementById('output');
   output.innerHTML = '';
 
-  // Create group boxes with spinning names
   for (let i = 0; i < groupCount; i++) {
     const box = document.createElement('div');
     box.className = 'group-box';
@@ -60,7 +52,7 @@ function startSpinning() {
         if (li) li.textContent = randomEntry.name;
       }
     }
-  }, 50); // fast spin effect
+  }, 50);
 }
 
 function stopSpinning() {
@@ -73,42 +65,53 @@ function stopSpinning() {
   const perGroup = parseInt(document.getElementById('perGroup').value);
   const totalNeeded = groupCount * perGroup;
 
-  const finalGroups = [];
-  let usedIndices = new Set();
+  let finalGroups = [];
   let attempt = 0;
   const maxAttempts = 1000;
 
   while (finalGroups.length < groupCount && attempt++ < maxAttempts) {
     const tempGroups = [];
-    let lastRole = Math.random() < 0.5 ? 'buyer' : 'sourcing';
-    let lastLevel = Math.random() < 0.5 ? 'junior' : 'senior';
-
-    usedIndices = new Set();
+    let usedIndices = new Set();
 
     let success = true;
+
     for (let g = 0; g < groupCount; g++) {
-      const group = [];
+      let group = [];
+      let localLastRole = Math.random() < 0.5 ? 'buyer' : 'sourcing';
+      let localLastLevel = Math.random() < 0.5 ? 'junior' : 'senior';
 
       for (let m = 0; m < perGroup; m++) {
-        let role = Math.random() < 0.95 ? (lastRole === 'buyer' ? 'sourcing' : 'buyer') : lastRole;
-        let level = Math.random() < 0.95 ? (lastLevel === 'junior' ? 'senior' : 'junior') : lastLevel;
+        let expectedRole = Math.random() < 0.9 ? (localLastRole === 'buyer' ? 'sourcing' : 'buyer') : localLastRole;
+        let expectedLevel = Math.random() < 0.8 ? (localLastLevel === 'junior' ? 'senior' : 'junior') : localLastLevel;
 
-        const candidateIdx = windowEntries.findIndex((p, idx) =>
-          !usedIndices.has(idx) &&
-          p.role === role &&
-          p.level === level
-        );
+        let candidates = windowEntries
+          .map((p, idx) => ({ ...p, idx }))
+          .filter(p => !usedIndices.has(p.idx) && p.role === expectedRole && p.level === expectedLevel);
 
-        if (candidateIdx === -1) {
+        if (candidates.length === 0) {
+          // Try relaxing to just expectedRole
+          candidates = windowEntries
+            .map((p, idx) => ({ ...p, idx }))
+            .filter(p => !usedIndices.has(p.idx) && p.role === expectedRole);
+        }
+
+        if (candidates.length === 0) {
+          // Fallback: pick any remaining
+          candidates = windowEntries
+            .map((p, idx) => ({ ...p, idx }))
+            .filter(p => !usedIndices.has(p.idx));
+        }
+
+        if (candidates.length === 0) {
           success = false;
           break;
         }
 
-        usedIndices.add(candidateIdx);
-        const person = windowEntries[candidateIdx];
-        group.push(person);
-        lastRole = person.role;
-        lastLevel = person.level;
+        const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+        usedIndices.add(chosen.idx);
+        group.push(chosen);
+        localLastRole = chosen.role;
+        localLastLevel = chosen.level;
       }
 
       if (!success) break;
@@ -116,7 +119,8 @@ function stopSpinning() {
     }
 
     if (success) {
-      finalGroups.push(...tempGroups);
+      finalGroups = tempGroups;
+      break;
     }
   }
 
@@ -125,11 +129,10 @@ function stopSpinning() {
     return;
   }
 
-  // Final display of names
   for (let i = 0; i < groupCount; i++) {
     for (let j = 0; j < perGroup; j++) {
       const li = document.getElementById(`g${i}-m${j}`);
-      li.textContent = finalGroups[i][j].name;
+      li.textContent = finalGroups[i][j]?.name || 'BLANK';
     }
   }
 }
