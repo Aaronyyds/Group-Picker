@@ -1,4 +1,3 @@
-<script>
 let spinning = false;
 let windowEntries = [];
 let finalGroups = [];
