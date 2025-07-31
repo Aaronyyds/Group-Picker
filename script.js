@@ -1,24 +1,3 @@
-let spinning = false;
-let spinInterval;
-let windowEntries = [];
-
-fetch('https://aaronyyds.github.io/Group-Picker/sample.csv?nocache=' + new Date().getTime())
-  .then(response => response.text())
-  .then(data => {
-    windowEntries = data
-      .split('\n')
-      .slice(1)
-      .map(line => {
-        const [name, role, level] = line.split(',');
-        return {
-          name: name?.trim(),
-          role: role?.trim().toLowerCase(),
-          level: level?.trim().toLowerCase()
-        };
-      })
-      .filter(entry => entry.name && entry.role && entry.level);
-  });
-
 function startSpinning() {
   const groupCount = parseInt(document.getElementById('groupCount').value);
   const perGroup = parseInt(document.getElementById('perGroup').value);
@@ -42,14 +21,24 @@ function startSpinning() {
 
   spinning = true;
 
+  const shuffle = arr => [...arr].sort(() => Math.random() - 0.5);
+
+  // Pre-shuffle pools once
+  const sourcingBase = shuffle(windowEntries.filter(p => p.role === 'sourcing'));
+  const buyerBase = shuffle(windowEntries.filter(p => p.role === 'buyer'));
+
+  let attempts = 0;
+
   spinInterval = setInterval(() => {
-    const sourcingPool = windowEntries.filter(p => p.role === 'sourcing');
-    const buyerPool = windowEntries.filter(p => p.role === 'buyer');
+    attempts++;
+    if (attempts > 1000) {
+      clearInterval(spinInterval);
+      alert("无法在合理时间内生成组合，请检查样本分布。");
+      return;
+    }
 
-    const shuffle = arr => [...arr].sort(() => Math.random() - 0.5);
-    let sourcing = shuffle(sourcingPool);
-    let buyer = shuffle(buyerPool);
-
+    let sourcing = [...sourcingBase];
+    let buyer = [...buyerBase];
     const groups = [];
     let sourcingIndex = 0;
     let buyerIndex = 0;
@@ -61,18 +50,24 @@ function startSpinning() {
       let currentLevel = Math.random() < 0.5 ? 'senior' : 'junior';
 
       for (let j = 0; j < perGroup; j++) {
-        let pool = currentRole === 'sourcing' ? sourcing : buyer;
-        let index = currentRole === 'sourcing' ? sourcingIndex : buyerIndex;
+        const pool = currentRole === 'sourcing' ? sourcing : buyer;
+        const index = currentRole === 'sourcing' ? sourcingIndex : buyerIndex;
 
         let personIndex = pool.findIndex(p => p.level === currentLevel);
 
         if (personIndex === -1) {
-          if (index >= pool.length) { enough = false; break; }
-          personIndex = 0;
+          if (index >= pool.length) {
+            enough = false;
+            break;
+          }
+          personIndex = 0; // fallback to first
         }
 
         const [person] = pool.splice(personIndex, 1);
-        if (!person) { enough = false; break; }
+        if (!person) {
+          enough = false;
+          break;
+        }
 
         if (currentRole === 'sourcing') sourcingIndex++;
         else buyerIndex++;
@@ -80,7 +75,7 @@ function startSpinning() {
         group.push(person);
 
         // 90% chance to switch role
-        if (Math.random() < 0.8) {
+        if (Math.random() < 0.9) {
           currentRole = currentRole === 'sourcing' ? 'buyer' : 'sourcing';
         }
 
@@ -97,17 +92,11 @@ function startSpinning() {
     if (enough) {
       for (let i = 0; i < groupCount; i++) {
         const groupBox = document.getElementById(`group-${i}`);
-        groupBox.innerHTML = `<strong>Group ${i + 1}</strong><ul>${
+        groupBox.innerHTML = `<strong>第 ${i + 1} 组</strong><ul>${
           groups[i].map(p => `<li>${p.name}</li>`).join('')
         }</ul>`;
       }
     }
-  }, 100);
-}
 
-function stopSpinning() {
-  if (spinning) {
-    clearInterval(spinInterval);
-    spinning = false;
-  }
+  }, 100); // Lower this to 50ms for faster animation if desired
 }
