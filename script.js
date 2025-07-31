@@ -1,7 +1,8 @@
 let windowEntries = [];
+let spinning = false;
+let spinInterval;
 let finalGroups = [];
 
-// Load CSV once
 fetch('https://aaronyyds.github.io/Group-Picker/sample.csv?nocache=' + new Date().getTime())
   .then(response => response.text())
   .then(data => {
@@ -19,41 +20,10 @@ fetch('https://aaronyyds.github.io/Group-Picker/sample.csv?nocache=' + new Date(
       .filter(entry => entry.name && entry.role && entry.level);
   });
 
-// Group generation logic
-function generateFinalGroups(groupCount, perGroup) {
-  const sourcingPool = windowEntries.filter(p => p.role === 'sourcing');
-  const buyerPool = windowEntries.filter(p => p.role === 'buyer');
-  let sourcing = [...sourcingPool].sort(() => Math.random() - 0.5);
-  let buyer = [...buyerPool].sort(() => Math.random() - 0.5);
-
-  const groups = [];
-
-  for (let i = 0; i < groupCount; i++) {
-    const group = [];
-    let role = Math.random() < 0.5 ? 'sourcing' : 'buyer';
-    let level = Math.random() < 0.5 ? 'senior' : 'junior';
-
-    for (let j = 0; j < perGroup; j++) {
-      let pool = role === 'sourcing' ? sourcing : buyer;
-      let personIndex = pool.findIndex(p => p.level === level);
-      if (personIndex === -1) personIndex = 0;
-
-      const [person] = pool.splice(personIndex, 1);
-      if (!person) break;
-
-      group.push(person);
-
-      if (Math.random() < 0.9) role = role === 'sourcing' ? 'buyer' : 'sourcing';
-      if (Math.random() < 0.8) level = level === 'senior' ? 'junior' : 'senior';
-    }
-
-    groups.push(group);
-  }
-
-  return groups;
+function shuffle(arr) {
+  return [...arr].sort(() => Math.random() - 0.5);
 }
 
-// Start button: generate and show groups instantly
 function startSpinning() {
   const groupCount = parseInt(document.getElementById('groupCount').value);
   const perGroup = parseInt(document.getElementById('perGroup').value);
@@ -64,23 +34,66 @@ function startSpinning() {
     return;
   }
 
-  finalGroups = generateFinalGroups(groupCount, perGroup);
-
   const output = document.getElementById('output');
   output.innerHTML = '';
 
-  for (let i = 0; i < finalGroups.length; i++) {
+  // create group boxes with placeholders
+  for (let i = 0; i < groupCount; i++) {
     const box = document.createElement('div');
     box.className = 'group-box';
     box.id = `group-${i}`;
-    box.innerHTML = `<strong>第 ${i + 1} 组</strong><ul>${
-      finalGroups[i].map(p => `<li>${p.name}</li>`).join('')
-    }</ul>`;
+    box.innerHTML = `<strong>第 ${i + 1} 组</strong><ul>` +
+      Array.from({ length: perGroup }, () => `<li>🎲</li>`).join('') +
+      `</ul>`;
     output.appendChild(box);
   }
+
+  spinning = true;
+
+  spinInterval = setInterval(() => {
+    for (let i = 0; i < groupCount; i++) {
+      const groupBox = document.getElementById(`group-${i}`);
+      const lis = groupBox.getElementsByTagName('li');
+
+      for (let j = 0; j < perGroup; j++) {
+        const random = windowEntries[Math.floor(Math.random() * windowEntries.length)];
+        lis[j].textContent = random.name;
+      }
+    }
+  }, 50); // fast update
 }
 
-// Stop button (not needed now, kept for compatibility)
 function stopSpinning() {
-  // No operation needed since there's no spinning animation
+  if (!spinning) return;
+
+  clearInterval(spinInterval);
+  spinning = false;
+
+  const groupCount = parseInt(document.getElementById('groupCount').value);
+  const perGroup = parseInt(document.getElementById('perGroup').value);
+
+  // actual final group assignment
+  const entriesCopy = shuffle(windowEntries);
+  const groups = [];
+
+  let index = 0;
+  for (let i = 0; i < groupCount; i++) {
+    const group = [];
+    for (let j = 0; j < perGroup; j++) {
+      if (index < entriesCopy.length) {
+        group.push(entriesCopy[index++]);
+      }
+    }
+    groups.push(group);
+  }
+
+  finalGroups = groups;
+
+  // update UI with final names
+  for (let i = 0; i < groups.length; i++) {
+    const groupBox = document.getElementById(`group-${i}`);
+    groupBox.innerHTML = `<strong>第 ${i + 1} 组</strong><ul>` +
+      groups[i].map(p => `<li>${p.name}</li>`).join('') +
+      `</ul>`;
+  }
 }
