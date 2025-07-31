@@ -67,95 +67,94 @@ function stopSpinning() {
   const perGroup = parseInt(document.getElementById('perGroup').value);
   const totalNeeded = groupCount * perGroup;
 
-  let finalGroups = [];
   let attempt = 0;
-  const maxAttempts = 1000;
+  let success = false;
+  let finalGroups = [];
 
-  while (attempt++ < maxAttempts) {
-    let tempGroups = [];
-    let usedNames = new Set();
-    let success = true;
+  while (attempt++ < 1000) {
+    const usedNames = new Set();
+    finalGroups = [];
+    let shuffled = shuffle([...windowEntries]);
 
-    const shuffledEntries = shuffle(windowEntries);
+    // Normalize names (trim to prevent hidden mismatches)
+    shuffled = shuffled.map(entry => ({
+      name: entry.name.trim(),
+      role: entry.role.trim().toLowerCase(),
+      level: entry.level.trim().toLowerCase()
+    }));
+
+    let available = [...shuffled];
 
     for (let g = 0; g < groupCount; g++) {
-      let group = [];
+      const group = [];
 
-      // Step 1: Find two initial members with different role and level
-      let firstTwoPicked = false;
-      const candidates = shuffledEntries.filter(p => !usedNames.has(p.name));
-
-      for (let i = 0; i < candidates.length && !firstTwoPicked; i++) {
-        for (let j = i + 1; j < candidates.length && !firstTwoPicked; j++) {
-          const a = candidates[i];
-          const b = candidates[j];
-          if (a.role !== b.role && a.level !== b.level) {
-            group.push(a, b);
-            usedNames.add(a.name);
-            usedNames.add(b.name);
-            firstTwoPicked = true;
+      // Step 1: Select 2 diverse starters
+      let starters = [];
+      for (let i = 0; i < available.length; i++) {
+        for (let j = i + 1; j < available.length; j++) {
+          const a = available[i];
+          const b = available[j];
+          if (
+            a.role !== b.role &&
+            a.level !== b.level &&
+            !usedNames.has(a.name) &&
+            !usedNames.has(b.name)
+          ) {
+            starters = [a, b];
+            break;
           }
         }
+        if (starters.length === 2) break;
       }
 
-      if (!firstTwoPicked) {
-        success = false;
-        break;
-      }
+      if (starters.length < 2) break; // Retry whole grouping
 
-      // Step 2: Fill remaining with switch logic
-      let last = group[group.length - 1];
+      group.push(...starters);
+      usedNames.add(starters[0].name);
+      usedNames.add(starters[1].name);
+
+      // Step 2: Continue picking with switching probability
       while (group.length < perGroup) {
-        const expectedRole = Math.random() < 0.8 ? (last.role === 'buyer' ? 'sourcing' : 'buyer') : last.role;
-        const expectedLevel = Math.random() < 0.8 ? (last.level === 'junior' ? 'senior' : 'junior') : last.level;
+        const last = group[group.length - 1];
+        const wantRole = Math.random() < 0.8 ? (last.role === 'buyer' ? 'sourcing' : 'buyer') : last.role;
+        const wantLevel = Math.random() < 0.8 ? (last.level === 'junior' ? 'senior' : 'junior') : last.level;
 
-        let candidates = shuffledEntries.filter(p =>
-          !usedNames.has(p.name) &&
-          p.role === expectedRole &&
-          p.level === expectedLevel
+        let candidates = available.filter(
+          p => !usedNames.has(p.name) && p.role === wantRole && p.level === wantLevel
         );
 
         if (candidates.length === 0) {
-          candidates = shuffledEntries.filter(p =>
-            !usedNames.has(p.name) &&
-            p.role === expectedRole
-          );
+          candidates = available.filter(p => !usedNames.has(p.name));
         }
 
-        if (candidates.length === 0) {
-          candidates = shuffledEntries.filter(p => !usedNames.has(p.name));
-        }
+        if (candidates.length === 0) break;
 
-        if (candidates.length === 0) {
-          success = false;
-          break;
-        }
-
-        const selected = candidates[Math.floor(Math.random() * candidates.length)];
-        group.push(selected);
-        usedNames.add(selected.name);
-        last = selected;
+        const next = candidates[Math.floor(Math.random() * candidates.length)];
+        group.push(next);
+        usedNames.add(next.name);
       }
 
-      if (!success) break;
-      tempGroups.push(group);
+      if (group.length < perGroup) break;
+      finalGroups.push(group);
     }
 
-    if (success) {
-      finalGroups = tempGroups;
+    if (finalGroups.length === groupCount) {
+      success = true;
       break;
     }
   }
 
-  if (finalGroups.length !== groupCount) {
-    alert("生成分组失败，请检查样本数据是否足够多样。");
+  if (!success) {
+    alert("Failed to generate valid groups without duplicates after multiple attempts.");
     return;
   }
 
-  for (let i = 0; i < groupCount; i++) {
-    for (let j = 0; j < perGroup; j++) {
+  // Output
+  for (let i = 0; i < finalGroups.length; i++) {
+    const group = finalGroups[i];
+    for (let j = 0; j < group.length; j++) {
       const li = document.getElementById(`g${i}-m${j}`);
-      li.textContent = finalGroups[i][j]?.name || 'BLANK';
+      li.textContent = group[j].name;
     }
   }
 }
