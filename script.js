@@ -1,9 +1,7 @@
-let spinning = false;
-let spinInterval;
 let windowEntries = [];
 let finalGroups = [];
 
-// Load CSV
+// Load CSV once
 fetch('https://aaronyyds.github.io/Group-Picker/sample.csv?nocache=' + new Date().getTime())
   .then(response => response.text())
   .then(data => {
@@ -21,7 +19,7 @@ fetch('https://aaronyyds.github.io/Group-Picker/sample.csv?nocache=' + new Date(
       .filter(entry => entry.name && entry.role && entry.level);
   });
 
-// Generate all groups at once
+// Group generation logic
 function generateFinalGroups(groupCount, perGroup) {
   const sourcingPool = windowEntries.filter(p => p.role === 'sourcing');
   const buyerPool = windowEntries.filter(p => p.role === 'buyer');
@@ -55,6 +53,7 @@ function generateFinalGroups(groupCount, perGroup) {
   return groups;
 }
 
+// Start button: generate and show groups instantly
 function startSpinning() {
   const groupCount = parseInt(document.getElementById('groupCount').value);
   const perGroup = parseInt(document.getElementById('perGroup').value);
@@ -69,35 +68,19 @@ function startSpinning() {
 
   const output = document.getElementById('output');
   output.innerHTML = '';
-  for (let i = 0; i < groupCount; i++) {
+
+  for (let i = 0; i < finalGroups.length; i++) {
     const box = document.createElement('div');
     box.className = 'group-box';
     box.id = `group-${i}`;
-    box.innerHTML = `<strong>第 ${i + 1} 组</strong><ul>${'<li>🎲</li>'.repeat(perGroup)}</ul>`;
-    output.appendChild(box);
-  }
-
-  spinning = true;
-  spinInterval = setInterval(() => {
-    for (let i = 0; i < groupCount; i++) {
-      const box = document.getElementById(`group-${i}`);
-      const lis = box.querySelectorAll('li');
-      lis.forEach(li => {
-        li.textContent = ['🎲', '💫', '✨', '🎯'][Math.floor(Math.random() * 4)];
-      });
-    }
-  }, 100);
-}
-
-function stopSpinning() {
-  if (!spinning) return;
-  clearInterval(spinInterval);
-  spinning = false;
-
-  for (let i = 0; i < finalGroups.length; i++) {
-    const groupBox = document.getElementById(`group-${i}`);
-    groupBox.innerHTML = `<strong>第 ${i + 1} 组</strong><ul>${
+    box.innerHTML = `<strong>第 ${i + 1} 组</strong><ul>${
       finalGroups[i].map(p => `<li>${p.name}</li>`).join('')
     }</ul>`;
+    output.appendChild(box);
   }
+}
+
+// Stop button (not needed now, kept for compatibility)
+function stopSpinning() {
+  // No operation needed since there's no spinning animation
 }
