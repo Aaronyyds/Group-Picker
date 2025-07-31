@@ -23,38 +23,6 @@ function shuffle(arr) {
   return [...arr].sort(() => Math.random() - 0.5);
 }
 
-function startSpinning() {
-  const groupCount = parseInt(document.getElementById('groupCount').value);
-  const perGroup = parseInt(document.getElementById('perGroup').value);
-  const output = document.getElementById('output');
-  output.innerHTML = '';
-
-  for (let i = 0; i < groupCount; i++) {
-    const box = document.createElement('div');
-    box.className = 'group-box';
-    box.id = `group-${i}`;
-    let ul = '<ul>';
-    for (let j = 0; j < perGroup; j++) {
-      ul += `<li id="g${i}-m${j}">🎲</li>`;
-    }
-    ul += '</ul>';
-    box.innerHTML = `<strong>第 ${i + 1} 组</strong>${ul}`;
-    output.appendChild(box);
-  }
-
-  spinning = true;
-
-  spinInterval = setInterval(() => {
-    for (let i = 0; i < groupCount; i++) {
-      for (let j = 0; j < perGroup; j++) {
-        const randomEntry = windowEntries[Math.floor(Math.random() * windowEntries.length)];
-        const li = document.getElementById(`g${i}-m${j}`);
-        if (li) li.textContent = randomEntry.name;
-      }
-    }
-  }, 50);
-}
-
 function stopSpinning() {
   if (!spinning) return;
 
@@ -76,12 +44,39 @@ function stopSpinning() {
 
     for (let g = 0; g < groupCount; g++) {
       let group = [];
-      let localLastRole = Math.random() < 0.5 ? 'buyer' : 'sourcing';
-      let localLastLevel = Math.random() < 0.5 ? 'junior' : 'senior';
 
-      for (let m = 0; m < perGroup; m++) {
-        let expectedRole = Math.random() < 0.7 ? (localLastRole === 'buyer' ? 'sourcing' : 'buyer') : localLastRole;
-        let expectedLevel = Math.random() < 0.7 ? (localLastLevel === 'junior' ? 'senior' : 'junior') : localLastLevel;
+      // Step 1: Ensure first two members collectively cover all 4 traits
+      let pairFound = false;
+
+      const candidates = windowEntries.map((p, idx) => ({ ...p, idx }))
+        .filter(p => !usedIndices.has(p.idx));
+
+      for (let i = 0; i < candidates.length && !pairFound; i++) {
+        for (let j = i + 1; j < candidates.length && !pairFound; j++) {
+          const p1 = candidates[i], p2 = candidates[j];
+
+          const roleSet = new Set([p1.role, p2.role]);
+          const levelSet = new Set([p1.level, p2.level]);
+
+          if (roleSet.has('buyer') && roleSet.has('sourcing') && levelSet.has('senior') && levelSet.has('junior')) {
+            group.push(p1, p2);
+            usedIndices.add(p1.idx);
+            usedIndices.add(p2.idx);
+            pairFound = true;
+          }
+        }
+      }
+
+      if (!pairFound) {
+        success = false;
+        break;
+      }
+
+      // Step 2: Fill the remaining members with 0.8 switch logic
+      let last = group[group.length - 1];
+      while (group.length < perGroup) {
+        let expectedRole = Math.random() < 0.8 ? (last.role === 'buyer' ? 'sourcing' : 'buyer') : last.role;
+        let expectedLevel = Math.random() < 0.8 ? (last.level === 'junior' ? 'senior' : 'junior') : last.level;
 
         let candidates = windowEntries
           .map((p, idx) => ({ ...p, idx }))
@@ -105,15 +100,14 @@ function stopSpinning() {
         }
 
         const chosen = candidates[Math.floor(Math.random() * candidates.length)];
-        usedIndices.add(chosen.idx);
         group.push(chosen);
-        localLastRole = chosen.role;
-        localLastLevel = chosen.level;
+        usedIndices.add(chosen.idx);
+        last = chosen;
       }
 
       if (!success) break;
 
-      // Validate the group has at least 1 Buyer, 1 Sourcing, 1 Senior, 1 Junior
+      // Final safety check
       const roles = group.map(p => p.role);
       const levels = group.map(p => p.level);
       const hasBuyer = roles.includes('buyer');
