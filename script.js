@@ -1,7 +1,6 @@
 let windowEntries = [];
 let spinning = false;
 let spinInterval;
-let dataLoaded = false;
 
 fetch('https://aaronyyds.github.io/Group-Picker/sample.csv?nocache=' + new Date().getTime())
   .then(response => response.text())
@@ -18,15 +17,6 @@ fetch('https://aaronyyds.github.io/Group-Picker/sample.csv?nocache=' + new Date(
         };
       })
       .filter(entry => entry.name && entry.role && entry.level);
-
-    if (windowEntries.length === 0) {
-      alert("⚠️ 无有效数据，请检查 sample.csv");
-    } else {
-      dataLoaded = true;
-    }
-  })
-  .catch(error => {
-    alert("❌ 加载 sample.csv 出错：" + error.message);
   });
 
 function shuffle(arr) {
@@ -34,11 +24,6 @@ function shuffle(arr) {
 }
 
 function startSpinning() {
-  if (!dataLoaded) {
-    alert("⏳ 正在加载数据，请稍候...");
-    return;
-  }
-
   const groupCount = parseInt(document.getElementById('groupCount').value);
   const perGroup = parseInt(document.getElementById('perGroup').value);
   const output = document.getElementById('output');
@@ -64,7 +49,7 @@ function startSpinning() {
       for (let j = 0; j < perGroup; j++) {
         const randomEntry = windowEntries[Math.floor(Math.random() * windowEntries.length)];
         const li = document.getElementById(`g${i}-m${j}`);
-        if (li && randomEntry) li.textContent = randomEntry.name;
+        if (li) li.textContent = randomEntry.name;
       }
     }
   }, 50);
@@ -78,89 +63,72 @@ function stopSpinning() {
 
   const groupCount = parseInt(document.getElementById('groupCount').value);
   const perGroup = parseInt(document.getElementById('perGroup').value);
+  const totalNeeded = groupCount * perGroup;
 
+  let finalGroups = [];
   let attempt = 0;
   const maxAttempts = 1000;
-  let finalGroups = [];
 
-  while (attempt++ < maxAttempts) {
+  while (finalGroups.length < groupCount && attempt++ < maxAttempts) {
+    const tempGroups = [];
     let usedIndices = new Set();
-    let groups = [];
+
     let success = true;
 
     for (let g = 0; g < groupCount; g++) {
       let group = [];
+      let localLastRole = Math.random() < 0.5 ? 'buyer' : 'sourcing';
+      let localLastLevel = Math.random() < 0.5 ? 'junior' : 'senior';
 
-      // Step 1: Pick first 2 members to ensure full coverage
-      let starterCombos = windowEntries
-        .map((p1, idx1) => ({ ...p1, idx: idx1 }))
-        .filter(p1 => !usedIndices.has(p1.idx))
-        .flatMap(p1 => windowEntries
-          .map((p2, idx2) => ({ ...p2, idx: idx2 }))
-          .filter(p2 => !usedIndices.has(p2.idx) && p2.idx !== p1.idx)
-          .map(p2 => [p1, p2])
-        );
-
-      let validStarters = starterCombos.find(([a, b]) => {
-        const roles = new Set([a.role, b.role]);
-        const levels = new Set([a.level, b.level]);
-        return roles.has('buyer') && roles.has('sourcing') && levels.has('senior') && levels.has('junior');
-      });
-
-      if (!validStarters) {
-        success = false;
-        break;
-      }
-
-      let [first, second] = validStarters;
-      group.push(first);
-      group.push(second);
-      usedIndices.add(first.idx);
-      usedIndices.add(second.idx);
-
-      let lastRole = second.role;
-      let lastLevel = second.level;
-
-      while (group.length < perGroup) {
-        let expectedRole = Math.random() < 0.8 ? (lastRole === 'buyer' ? 'sourcing' : 'buyer') : lastRole;
-        let expectedLevel = Math.random() < 0.8 ? (lastLevel === 'senior' ? 'junior' : 'senior') : lastLevel;
+      for (let m = 0; m < perGroup; m++) {
+        let expectedRole = Math.random() < 0.8 ? (localLastRole === 'buyer' ? 'sourcing' : 'buyer') : localLastRole;
+        let expectedLevel = Math.random() < 0.8 ? (localLastLevel === 'junior' ? 'senior' : 'junior') : localLastLevel;
 
         let candidates = windowEntries
           .map((p, idx) => ({ ...p, idx }))
           .filter(p => !usedIndices.has(p.idx) && p.role === expectedRole && p.level === expectedLevel);
 
         if (candidates.length === 0) {
+          // Try relaxing to just expectedRole
+          candidates = windowEntries
+            .map((p, idx) => ({ ...p, idx }))
+            .filter(p => !usedIndices.has(p.idx) && p.role === expectedRole);
+        }
+
+        if (candidates.length === 0) {
+          // Fallback: pick any remaining
           candidates = windowEntries
             .map((p, idx) => ({ ...p, idx }))
             .filter(p => !usedIndices.has(p.idx));
         }
 
         if (candidates.length === 0) {
-          group.push({ name: 'BLANK', role: 'sourcing', level: 'junior' });
-        } else {
-          const pick = candidates[Math.floor(Math.random() * candidates.length)];
-          group.push(pick);
-          usedIndices.add(pick.idx);
-          lastRole = pick.role;
-          lastLevel = pick.level;
+          success = false;
+          break;
         }
+
+        const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+        usedIndices.add(chosen.idx);
+        group.push(chosen);
+        localLastRole = chosen.role;
+        localLastLevel = chosen.level;
       }
 
-      groups.push(group);
+      if (!success) break;
+      tempGroups.push(group);
     }
 
     if (success) {
-      finalGroups = groups;
+      finalGroups = tempGroups;
       break;
     }
   }
 
   if (finalGroups.length !== groupCount) {
-    alert("❌ 生成分组失败，请检查 sample.csv 数据是否足够。");
+    alert("生成分组失败，请检查样本数据是否足够多样。");
     return;
   }
 
-  // Display result
   for (let i = 0; i < groupCount; i++) {
     for (let j = 0; j < perGroup; j++) {
       const li = document.getElementById(`g${i}-m${j}`);
