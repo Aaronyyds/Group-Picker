@@ -19,43 +19,55 @@ fetch('https://aaronyyds.github.io/Group-Picker/sample.csv?nocache=' + new Date(
       .filter(entry => entry.name && entry.role && entry.level);
   });
 
-function weightedFilter(pool, targetKey, oppositeValue, weight = 0.9) {
-  const same = pool.filter(p => p[targetKey] === oppositeValue);
-  const opposite = pool.filter(p => p[targetKey] !== oppositeValue);
-
-  return Math.random() < weight ? same.concat(opposite) : opposite.concat(same);
+function shuffle(array) {
+  const result = [...array];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
 }
 
-function buildGroups(entries, groupCount, perGroup) {
-  const pool = [...entries];
-  const groups = [];
+function meetsHardConstraints(group) {
+  const roles = new Set(group.map(p => p.role));
+  const levels = new Set(group.map(p => p.level));
+  return roles.has('sourcing') && roles.has('buyer') && levels.has('senior') && levels.has('junior');
+}
 
-  for (let i = 0; i < groupCount; i++) {
-    const group = [];
-    let last = null;
+function generateGroupsHardRule(entries, groupCount, perGroup) {
+  const maxAttempts = 1000;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const shuffled = shuffle(entries);
+    const groups = [];
+    let valid = true;
 
-    for (let j = 0; j < perGroup; j++) {
-      let candidates = pool;
-
-      if (last) {
-        candidates = weightedFilter(candidates, 'role', last.role, 0.8);
-        candidates = weightedFilter(candidates, 'level', last.level, 0.8);
+    for (let i = 0; i < groupCount; i++) {
+      const group = shuffled.slice(i * perGroup, (i + 1) * perGroup);
+      if (group.length < perGroup || !meetsHardConstraints(group)) {
+        valid = false;
+        break;
       }
-
-      const pick = candidates[Math.floor(Math.random() * candidates.length)];
-      if (!pick) break;
-
-      group.push(pick);
-      last = pick;
-
-      const index = pool.findIndex(p => p.name === pick.name);
-      if (index !== -1) pool.splice(index, 1);
+      groups.push(group);
     }
 
-    groups.push(group);
+    if (valid) return groups;
   }
 
-  return groups;
+  alert("Unable to form valid groups with hard rules after 1000 attempts.");
+  return [];
+}
+
+function displayGroups(groups) {
+  const container = document.getElementById('resultContainer');
+  container.innerHTML = '';
+  groups.forEach((group, i) => {
+    const div = document.createElement('div');
+    div.className = 'group-box';
+    div.innerHTML = `<h3>第 ${i + 1} 组</h3><ul>` +
+      group.map(p => `<li>${p.name}</li>`).join('') +
+      '</ul>';
+    container.appendChild(div);
+  });
 }
 
 function startSpinning() {
@@ -69,32 +81,16 @@ function startSpinning() {
   }
 
   spinning = true;
+
   spinInterval = setInterval(() => {
-    const draftGroups = buildGroups(windowEntries, groupCount, perGroup);
-    displayGroups(draftGroups, true);
+    const groups = generateGroupsHardRule(windowEntries, groupCount, perGroup);
+    if (groups.length > 0) {
+      displayGroups(groups);
+    }
   }, 100);
 }
 
 function stopSpinning() {
-  clearInterval(spinInterval);
   spinning = false;
-
-  const groupCount = parseInt(document.getElementById('groupCount').value);
-  const perGroup = parseInt(document.getElementById('perGroup').value);
-  const finalGroups = buildGroups(windowEntries, groupCount, perGroup);
-  displayGroups(finalGroups, false);
-}
-
-function displayGroups(groups, spinningMode) {
-  const resultDiv = document.getElementById('result');
-  resultDiv.innerHTML = '';
-
-  groups.forEach((group, i) => {
-    const groupDiv = document.createElement('div');
-    groupDiv.className = 'group';
-    groupDiv.innerHTML = `<strong>第 ${i + 1} 组</strong><ul>` +
-      group.map(entry => `<li>${entry.name}</li>`).join('') +
-      '</ul>';
-    resultDiv.appendChild(groupDiv);
-  });
+  clearInterval(spinInterval);
 }
