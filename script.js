@@ -2,6 +2,7 @@
     let spinning = false;
     let spinInterval;
 
+    // Load CSV data
     fetch('https://aaronyyds.github.io/Group-Picker/sample.csv?nocache=' + new Date().getTime())
       .then(response => response.text())
       .then(data => {
@@ -17,6 +18,7 @@
             };
           })
           .filter(entry => entry.name && entry.role && entry.level);
+        document.getElementById('startBtn').disabled = false;
       });
 
     function startSpinning() {
@@ -53,13 +55,11 @@
 
     function stopSpinning() {
       if (!spinning) return;
-
       clearInterval(spinInterval);
       spinning = false;
 
       const groupCount = parseInt(document.getElementById('groupCount').value);
       const perGroup = parseInt(document.getElementById('perGroup').value);
-      const totalNeeded = groupCount * perGroup;
 
       let finalGroups = [];
       let attempt = 0;
@@ -129,3 +129,5 @@
         }
       }
     }
+
+    document.getElementById('startBtn').onclick = startSpinning;
