@@ -2,7 +2,7 @@ let spinning = false;
 let spinInterval;
 let windowEntries = [];
 
-fetch('https://aaronyyds.github.io/Group-Picker/sample.csv')
+fetch('https://aaronyyds.github.io/Group-Picker/sample.csv?nocache=' + new Date().getTime())
   .then(response => response.text())
   .then(data => {
     windowEntries = data
@@ -35,8 +35,8 @@ function startSpinning() {
   for (let i = 0; i < groupCount; i++) {
     const box = document.createElement('div');
     box.className = 'group-box';
-    box.id = `group-${i}`;
-    box.innerHTML = `<strong>第 ${i + 1} 组</strong><ul>${'<li>🎲</li>'.repeat(perGroup)}</ul>`;
+    box.id = group-${i};
+    box.innerHTML = <strong>第 ${i + 1} 组</strong><ul>${'<li>🎲</li>'.repeat(perGroup)}</ul>;
     output.appendChild(box);
   }
 
@@ -98,10 +98,10 @@ function startSpinning() {
 
     if (enough) {
       for (let i = 0; i < groupCount; i++) {
-        const groupBox = document.getElementById(`group-${i}`);
-        groupBox.innerHTML = `<strong>Group ${i + 1} </strong><ul>${
-          groups[i].map(p => `<li>${p.name}</li>`).join('')
-        }</ul>`;
+        const groupBox = document.getElementById(group-${i});
+        groupBox.innerHTML = <strong>Group ${i + 1} </strong><ul>${
+          groups[i].map(p => <li>${p.name}</li>).join('')
+        }</ul>;
       }
     }
   }, 100);
