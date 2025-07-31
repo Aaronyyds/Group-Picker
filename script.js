@@ -1,7 +1,6 @@
 let windowEntries = [];
 let spinning = false;
 let spinInterval;
-let finalGroups = [];
 
 fetch('https://aaronyyds.github.io/Group-Picker/sample.csv?nocache=' + new Date().getTime())
   .then(response => response.text())
@@ -37,7 +36,7 @@ function startSpinning() {
   const output = document.getElementById('output');
   output.innerHTML = '';
 
-  // Create group boxes with empty placeholders
+  // Create group boxes with spinning names
   for (let i = 0; i < groupCount; i++) {
     const box = document.createElement('div');
     box.className = 'group-box';
@@ -61,7 +60,7 @@ function startSpinning() {
         if (li) li.textContent = randomEntry.name;
       }
     }
-  }, 50); // Update every 50ms
+  }, 50); // fast spin effect
 }
 
 function stopSpinning() {
@@ -74,16 +73,63 @@ function stopSpinning() {
   const perGroup = parseInt(document.getElementById('perGroup').value);
   const totalNeeded = groupCount * perGroup;
 
-  const finalPool = shuffle(windowEntries).slice(0, totalNeeded);
-  let index = 0;
+  const finalGroups = [];
+  let usedIndices = new Set();
+  let attempt = 0;
+  const maxAttempts = 1000;
 
+  while (finalGroups.length < groupCount && attempt++ < maxAttempts) {
+    const tempGroups = [];
+    let lastRole = Math.random() < 0.5 ? 'buyer' : 'sourcing';
+    let lastLevel = Math.random() < 0.5 ? 'junior' : 'senior';
+
+    usedIndices = new Set();
+
+    let success = true;
+    for (let g = 0; g < groupCount; g++) {
+      const group = [];
+
+      for (let m = 0; m < perGroup; m++) {
+        let role = Math.random() < 0.9 ? (lastRole === 'buyer' ? 'sourcing' : 'buyer') : lastRole;
+        let level = Math.random() < 0.8 ? (lastLevel === 'junior' ? 'senior' : 'junior') : lastLevel;
+
+        const candidateIdx = windowEntries.findIndex((p, idx) =>
+          !usedIndices.has(idx) &&
+          p.role === role &&
+          p.level === level
+        );
+
+        if (candidateIdx === -1) {
+          success = false;
+          break;
+        }
+
+        usedIndices.add(candidateIdx);
+        const person = windowEntries[candidateIdx];
+        group.push(person);
+        lastRole = person.role;
+        lastLevel = person.level;
+      }
+
+      if (!success) break;
+      tempGroups.push(group);
+    }
+
+    if (success) {
+      finalGroups.push(...tempGroups);
+    }
+  }
+
+  if (finalGroups.length !== groupCount) {
+    alert("生成分组失败，请检查样本数据是否足够多样。");
+    return;
+  }
+
+  // Final display of names
   for (let i = 0; i < groupCount; i++) {
     for (let j = 0; j < perGroup; j++) {
       const li = document.getElementById(`g${i}-m${j}`);
-      if (li && finalPool[index]) {
-        li.textContent = finalPool[index].name;
-        index++;
-      }
+      li.textContent = finalGroups[i][j].name;
     }
   }
 }
