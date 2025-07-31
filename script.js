@@ -53,10 +53,6 @@
       }, 50);
     }
 
-function shuffle(arr) {
-  return [...arr].sort(() => Math.random() - 0.5);
-}
-
 function stopSpinning() {
   if (!spinning) return;
 
@@ -76,14 +72,16 @@ function stopSpinning() {
     let usedIndices = new Set();
     let success = true;
 
+    // Shuffle once per attempt
+    const shuffledEntries = shuffle(windowEntries).map((p, idx) => ({ ...p, idx }));
+
     for (let g = 0; g < groupCount; g++) {
       let group = [];
 
       // Step 1: Ensure first 2 members have all 4 traits: 1 Buyer + 1 Sourcing, 1 Senior + 1 Junior
       let pairFound = false;
-      const candidates = shuffle(
-        windowEntries.map((p, idx) => ({ ...p, idx }))
-      ).filter(p => !usedIndices.has(p.idx));
+
+      const candidates = shuffledEntries.filter(p => !usedIndices.has(p.idx));
 
       for (let i = 0; i < candidates.length && !pairFound; i++) {
         for (let j = i + 1; j < candidates.length && !pairFound; j++) {
@@ -113,8 +111,7 @@ function stopSpinning() {
         let expectedRole = Math.random() < 0.8 ? (last.role === 'buyer' ? 'sourcing' : 'buyer') : last.role;
         let expectedLevel = Math.random() < 0.8 ? (last.level === 'junior' ? 'senior' : 'junior') : last.level;
 
-        let candidates = windowEntries
-          .map((p, idx) => ({ ...p, idx }))
+        let candidates = shuffledEntries
           .filter(p =>
             !usedIndices.has(p.idx) &&
             p.role === expectedRole &&
@@ -122,14 +119,12 @@ function stopSpinning() {
           );
 
         if (candidates.length === 0) {
-          candidates = windowEntries
-            .map((p, idx) => ({ ...p, idx }))
+          candidates = shuffledEntries
             .filter(p => !usedIndices.has(p.idx) && p.role === expectedRole);
         }
 
         if (candidates.length === 0) {
-          candidates = windowEntries
-            .map((p, idx) => ({ ...p, idx }))
+          candidates = shuffledEntries
             .filter(p => !usedIndices.has(p.idx));
         }
 
