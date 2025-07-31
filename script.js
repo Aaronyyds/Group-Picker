@@ -53,6 +53,10 @@
       }, 50);
     }
 
+function shuffle(arr) {
+  return [...arr].sort(() => Math.random() - 0.5);
+}
+
 function stopSpinning() {
   if (!spinning) return;
 
@@ -75,10 +79,11 @@ function stopSpinning() {
     for (let g = 0; g < groupCount; g++) {
       let group = [];
 
-      // Step 1: Force first 2 people to include 1 buyer + 1 sourcing, and 1 senior + 1 junior
+      // Step 1: Ensure first 2 members have all 4 traits: 1 Buyer + 1 Sourcing, 1 Senior + 1 Junior
       let pairFound = false;
-      const candidates = windowEntries.map((p, idx) => ({ ...p, idx }))
-        .filter(p => !usedIndices.has(p.idx));
+      const candidates = shuffle(
+        windowEntries.map((p, idx) => ({ ...p, idx }))
+      ).filter(p => !usedIndices.has(p.idx));
 
       for (let i = 0; i < candidates.length && !pairFound; i++) {
         for (let j = i + 1; j < candidates.length && !pairFound; j++) {
@@ -88,10 +93,7 @@ function stopSpinning() {
           const roles = new Set([p1.role, p2.role]);
           const levels = new Set([p1.level, p2.level]);
 
-          const hasBuyerAndSourcing = roles.has('buyer') && roles.has('sourcing');
-          const hasSeniorAndJunior = levels.has('senior') && levels.has('junior');
-
-          if (hasBuyerAndSourcing && hasSeniorAndJunior) {
+          if (roles.size === 2 && levels.size === 2) {
             group.push(p1, p2);
             usedIndices.add(p1.idx);
             usedIndices.add(p2.idx);
@@ -105,7 +107,7 @@ function stopSpinning() {
         break;
       }
 
-      // Step 2: Fill remaining group members using 0.8 switching logic
+      // Step 2: Fill remaining group members using 0.8 switch logic
       let last = group[group.length - 1];
       while (group.length < perGroup) {
         let expectedRole = Math.random() < 0.8 ? (last.role === 'buyer' ? 'sourcing' : 'buyer') : last.role;
