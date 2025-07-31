@@ -1,28 +1,3 @@
-let windowEntries = [];
-let spinning = false;
-let spinInterval;
-
-fetch('https://aaronyyds.github.io/Group-Picker/sample.csv?nocache=' + new Date().getTime())
-  .then(response => response.text())
-  .then(data => {
-    windowEntries = data
-      .split('\n')
-      .slice(1)
-      .map(line => {
-        const [name, role, level] = line.split(',');
-        return {
-          name: name?.trim(),
-          role: role?.trim().toLowerCase(),
-          level: level?.trim().toLowerCase()
-        };
-      })
-      .filter(entry => entry.name && entry.role && entry.level);
-  });
-
-function shuffle(arr) {
-  return [...arr].sort(() => Math.random() - 0.5);
-}
-
 function stopSpinning() {
   if (!spinning) return;
 
@@ -45,8 +20,9 @@ function stopSpinning() {
     for (let g = 0; g < groupCount; g++) {
       let group = [];
 
-      // Step 1: Ensure first two members cover all 4 traits
+      // Step 1: Ensure first two members collectively cover all 4 traits
       let pairFound = false;
+
       const candidates = windowEntries.map((p, idx) => ({ ...p, idx }))
         .filter(p => !usedIndices.has(p.idx));
 
@@ -54,11 +30,12 @@ function stopSpinning() {
         for (let j = i + 1; j < candidates.length && !pairFound; j++) {
           const p1 = candidates[i], p2 = candidates[j];
 
-          const roleSet = new Set([p1.role, p2.role]);
-          const levelSet = new Set([p1.level, p2.level]);
+          const hasDifferentRoles = (p1.role !== p2.role) &&
+            ((p1.role === 'buyer' && p2.role === 'sourcing') || (p1.role === 'sourcing' && p2.role === 'buyer'));
+          const hasDifferentLevels = (p1.level !== p2.level) &&
+            ((p1.level === 'senior' && p2.level === 'junior') || (p1.level === 'junior' && p2.level === 'senior'));
 
-          if (roleSet.has('buyer') && roleSet.has('sourcing') &&
-              levelSet.has('senior') && levelSet.has('junior')) {
+          if (hasDifferentRoles && hasDifferentLevels) {
             group.push(p1, p2);
             usedIndices.add(p1.idx);
             usedIndices.add(p2.idx);
@@ -72,7 +49,7 @@ function stopSpinning() {
         break;
       }
 
-      // Step 2: Fill the rest using switch logic
+      // Step 2: Fill the remaining members with 0.8 switch logic
       let last = group[group.length - 1];
       while (group.length < perGroup) {
         let expectedRole = Math.random() < 0.8 ? (last.role === 'buyer' ? 'sourcing' : 'buyer') : last.role;
