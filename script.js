@@ -1,3 +1,27 @@
+<script>
+let spinning = false;
+let windowEntries = [];
+let finalGroups = [];
+let spinAnimation;
+
+// Load CSV only once
+fetch('https://aaronyyds.github.io/Group-Picker/sample.csv?nocache=' + new Date().getTime())
+  .then(response => response.text())
+  .then(data => {
+    windowEntries = data
+      .split('\n')
+      .slice(1)
+      .map(line => {
+        const [name, role, level] = line.split(',');
+        return {
+          name: name?.trim(),
+          role: role?.trim().toLowerCase(),
+          level: level?.trim().toLowerCase()
+        };
+      })
+      .filter(entry => entry.name && entry.role && entry.level);
+  });
+
 function startSpinning() {
   const groupCount = parseInt(document.getElementById('groupCount').value);
   const perGroup = parseInt(document.getElementById('perGroup').value);
@@ -8,95 +32,104 @@ function startSpinning() {
     return;
   }
 
-  const output = document.getElementById('output');
-  output.innerHTML = '';
-
-  for (let i = 0; i < groupCount; i++) {
-    const box = document.createElement('div');
-    box.className = 'group-box';
-    box.id = `group-${i}`;
-    box.innerHTML = `<strong>第 ${i + 1} 组</strong><ul>${'<li>🎲</li>'.repeat(perGroup)}</ul>`;
-    output.appendChild(box);
-  }
-
   spinning = true;
+  spinLoop();
+}
+
+function stopSpinning() {
+  spinning = false;
+  cancelAnimationFrame(spinAnimation);
+  generateGroups();
+  displayGroups();
+}
+
+function spinLoop() {
+  if (!spinning) return;
+  // Show temporary flashing names
+  const groupBoxes = document.querySelectorAll('.groupBox');
+  groupBoxes.forEach(box => {
+    const random = windowEntries[Math.floor(Math.random() * windowEntries.length)];
+    box.innerText = random.name;
+  });
+  spinAnimation = requestAnimationFrame(spinLoop);
+}
+
+function generateGroups() {
+  const groupCount = parseInt(document.getElementById('groupCount').value);
+  const perGroup = parseInt(document.getElementById('perGroup').value);
+
+  const sourcing = windowEntries.filter(p => p.role === 'sourcing');
+  const buyer = windowEntries.filter(p => p.role === 'buyer');
 
   const shuffle = arr => [...arr].sort(() => Math.random() - 0.5);
 
-  // Pre-shuffle pools once
-  const sourcingBase = shuffle(windowEntries.filter(p => p.role === 'sourcing'));
-  const buyerBase = shuffle(windowEntries.filter(p => p.role === 'buyer'));
-
-  let attempts = 0;
-
-  spinInterval = setInterval(() => {
-    attempts++;
-    if (attempts > 1000) {
-      clearInterval(spinInterval);
-      alert("无法在合理时间内生成组合，请检查样本分布。");
-      return;
-    }
-
-    let sourcing = [...sourcingBase];
-    let buyer = [...buyerBase];
-    const groups = [];
-    let sourcingIndex = 0;
-    let buyerIndex = 0;
-    let enough = true;
+  for (let attempt = 0; attempt < 1000; attempt++) {
+    let sourcingPool = shuffle(sourcing);
+    let buyerPool = shuffle(buyer);
+    let groups = [];
+    let success = true;
 
     for (let i = 0; i < groupCount; i++) {
-      const group = [];
-      let currentRole = Math.random() < 0.5 ? 'sourcing' : 'buyer';
-      let currentLevel = Math.random() < 0.5 ? 'senior' : 'junior';
+      let group = [];
+      let lastRole = '';
+      let lastLevel = '';
 
       for (let j = 0; j < perGroup; j++) {
-        const pool = currentRole === 'sourcing' ? sourcing : buyer;
-        const index = currentRole === 'sourcing' ? sourcingIndex : buyerIndex;
+        let role = Math.random() < (lastRole === 'sourcing' ? 0.9 : 0.1) ? 'buyer' : 'sourcing';
+        let level = Math.random() < (lastLevel === 'senior' ? 0.8 : 0.2) ? 'junior' : 'senior';
 
-        let personIndex = pool.findIndex(p => p.level === currentLevel);
+        let pool = role === 'sourcing' ? sourcingPool : buyerPool;
+        let index = pool.findIndex(p => p.level === level);
 
-        if (personIndex === -1) {
-          if (index >= pool.length) {
-            enough = false;
-            break;
-          }
-          personIndex = 0; // fallback to first
+        if (index === -1) {
+          index = pool.length ? 0 : -1;
         }
 
-        const [person] = pool.splice(personIndex, 1);
-        if (!person) {
-          enough = false;
-          break;
-        }
-
-        if (currentRole === 'sourcing') sourcingIndex++;
-        else buyerIndex++;
-
-        group.push(person);
-
-        // 90% chance to switch role
-        if (Math.random() < 0.9) {
-          currentRole = currentRole === 'sourcing' ? 'buyer' : 'sourcing';
-        }
-
-        // 80% chance to switch level
-        if (Math.random() < 0.8) {
-          currentLevel = currentLevel === 'senior' ? 'junior' : 'senior';
+        if (index === -1) {
+          group.push({ name: 'Blank', role: role, level: level });
+        } else {
+          let person = pool.splice(index, 1)[0];
+          group.push(person);
+          lastRole = person.role;
+          lastLevel = person.level;
         }
       }
 
-      if (!enough) break;
+      let hasSourcing = group.some(p => p.role === 'sourcing');
+      let hasBuyer = group.some(p => p.role === 'buyer');
+      let hasSenior = group.some(p => p.level === 'senior');
+      let hasJunior = group.some(p => p.level === 'junior');
+
+      if (!hasSourcing || !hasBuyer || !hasSenior || !hasJunior) {
+        success = false;
+        break;
+      }
       groups.push(group);
     }
 
-    if (enough) {
-      for (let i = 0; i < groupCount; i++) {
-        const groupBox = document.getElementById(`group-${i}`);
-        groupBox.innerHTML = `<strong>第 ${i + 1} 组</strong><ul>${
-          groups[i].map(p => `<li>${p.name}</li>`).join('')
-        }</ul>`;
-      }
+    if (success) {
+      finalGroups = groups;
+      return;
     }
+  }
 
-  }, 100); // Lower this to 50ms for faster animation if desired
+  alert("无法在1000次尝试中生成合适的分组。请检查数据。");
 }
+
+function displayGroups() {
+  const container = document.getElementById('result');
+  container.innerHTML = '';
+
+  finalGroups.forEach((group, i) => {
+    const div = document.createElement('div');
+    div.className = 'groupBox';
+    div.innerHTML = `<strong>Group ${i + 1}</strong><br>` + group.map(p =>
+      `${p.name} (${capitalize(p.role)}, ${capitalize(p.level)})`).join('<br>');
+    container.appendChild(div);
+  });
+}
+
+function capitalize(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+</script>
