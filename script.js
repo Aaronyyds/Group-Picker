@@ -1,6 +1,6 @@
-let windowEntries = [];
 let spinning = false;
 let spinInterval;
+let windowEntries = [];
 
 fetch('https://aaronyyds.github.io/Group-Picker/sample.csv?nocache=' + new Date().getTime())
   .then(response => response.text())
@@ -19,120 +19,82 @@ fetch('https://aaronyyds.github.io/Group-Picker/sample.csv?nocache=' + new Date(
       .filter(entry => entry.name && entry.role && entry.level);
   });
 
-function shuffle(arr) {
-  return [...arr].sort(() => Math.random() - 0.5);
+function weightedFilter(pool, targetKey, oppositeValue, weight = 0.9) {
+  const same = pool.filter(p => p[targetKey] === oppositeValue);
+  const opposite = pool.filter(p => p[targetKey] !== oppositeValue);
+
+  return Math.random() < weight ? same.concat(opposite) : opposite.concat(same);
+}
+
+function buildGroups(entries, groupCount, perGroup) {
+  const pool = [...entries];
+  const groups = [];
+
+  for (let i = 0; i < groupCount; i++) {
+    const group = [];
+    let last = null;
+
+    for (let j = 0; j < perGroup; j++) {
+      let candidates = pool;
+
+      if (last) {
+        candidates = weightedFilter(candidates, 'role', last.role, 0.8);
+        candidates = weightedFilter(candidates, 'level', last.level, 0.8);
+      }
+
+      const pick = candidates[Math.floor(Math.random() * candidates.length)];
+      if (!pick) break;
+
+      group.push(pick);
+      last = pick;
+
+      const index = pool.findIndex(p => p.name === pick.name);
+      if (index !== -1) pool.splice(index, 1);
+    }
+
+    groups.push(group);
+  }
+
+  return groups;
 }
 
 function startSpinning() {
   const groupCount = parseInt(document.getElementById('groupCount').value);
   const perGroup = parseInt(document.getElementById('perGroup').value);
-  const output = document.getElementById('output');
-  output.innerHTML = '';
+  const totalNeeded = groupCount * perGroup;
 
-  for (let i = 0; i < groupCount; i++) {
-    const box = document.createElement('div');
-    box.className = 'group-box';
-    box.id = `group-${i}`;
-    let ul = '<ul>';
-    for (let j = 0; j < perGroup; j++) {
-      ul += `<li id="g${i}-m${j}">🎲</li>`;
-    }
-    ul += '</ul>';
-    box.innerHTML = `<strong>第 ${i + 1} 组</strong>${ul}`;
-    output.appendChild(box);
+  if (!windowEntries || windowEntries.length < totalNeeded) {
+    alert("样本数量不足，请检查 sample.csv 中是否有足够数据。");
+    return;
   }
 
   spinning = true;
-
   spinInterval = setInterval(() => {
-    for (let i = 0; i < groupCount; i++) {
-      for (let j = 0; j < perGroup; j++) {
-        const randomEntry = windowEntries[Math.floor(Math.random() * windowEntries.length)];
-        const li = document.getElementById(`g${i}-m${j}`);
-        if (li) li.textContent = randomEntry.name;
-      }
-    }
-  }, 50);
+    const draftGroups = buildGroups(windowEntries, groupCount, perGroup);
+    displayGroups(draftGroups, true);
+  }, 100);
 }
 
 function stopSpinning() {
-  if (!spinning) return;
-
   clearInterval(spinInterval);
   spinning = false;
 
   const groupCount = parseInt(document.getElementById('groupCount').value);
   const perGroup = parseInt(document.getElementById('perGroup').value);
-  const totalNeeded = groupCount * perGroup;
+  const finalGroups = buildGroups(windowEntries, groupCount, perGroup);
+  displayGroups(finalGroups, false);
+}
 
-  let finalGroups = [];
-  let attempt = 0;
-  const maxAttempts = 1000;
+function displayGroups(groups, spinningMode) {
+  const resultDiv = document.getElementById('result');
+  resultDiv.innerHTML = '';
 
-  while (finalGroups.length < groupCount && attempt++ < maxAttempts) {
-    const tempGroups = [];
-    let usedIndices = new Set();
-
-    let success = true;
-
-    for (let g = 0; g < groupCount; g++) {
-      let group = [];
-      let localLastRole = Math.random() < 0.5 ? 'buyer' : 'sourcing';
-      let localLastLevel = Math.random() < 0.5 ? 'junior' : 'senior';
-
-      for (let m = 0; m < perGroup; m++) {
-        let expectedRole = Math.random() < 0.8 ? (localLastRole === 'buyer' ? 'sourcing' : 'buyer') : localLastRole;
-        let expectedLevel = Math.random() < 0.8 ? (localLastLevel === 'junior' ? 'senior' : 'junior') : localLastLevel;
-
-        let candidates = windowEntries
-          .map((p, idx) => ({ ...p, idx }))
-          .filter(p => !usedIndices.has(p.idx) && p.role === expectedRole && p.level === expectedLevel);
-
-        if (candidates.length === 0) {
-          // Try relaxing to just expectedRole
-          candidates = windowEntries
-            .map((p, idx) => ({ ...p, idx }))
-            .filter(p => !usedIndices.has(p.idx) && p.role === expectedRole);
-        }
-
-        if (candidates.length === 0) {
-          // Fallback: pick any remaining
-          candidates = windowEntries
-            .map((p, idx) => ({ ...p, idx }))
-            .filter(p => !usedIndices.has(p.idx));
-        }
-
-        if (candidates.length === 0) {
-          success = false;
-          break;
-        }
-
-        const chosen = candidates[Math.floor(Math.random() * candidates.length)];
-        usedIndices.add(chosen.idx);
-        group.push(chosen);
-        localLastRole = chosen.role;
-        localLastLevel = chosen.level;
-      }
-
-      if (!success) break;
-      tempGroups.push(group);
-    }
-
-    if (success) {
-      finalGroups = tempGroups;
-      break;
-    }
-  }
-
-  if (finalGroups.length !== groupCount) {
-    alert("生成分组失败，请检查样本数据是否足够多样。");
-    return;
-  }
-
-  for (let i = 0; i < groupCount; i++) {
-    for (let j = 0; j < perGroup; j++) {
-      const li = document.getElementById(`g${i}-m${j}`);
-      li.textContent = finalGroups[i][j]?.name || 'BLANK';
-    }
-  }
+  groups.forEach((group, i) => {
+    const groupDiv = document.createElement('div');
+    groupDiv.className = 'group';
+    groupDiv.innerHTML = `<strong>第 ${i + 1} 组</strong><ul>` +
+      group.map(entry => `<li>${entry.name}</li>`).join('') +
+      '</ul>';
+    resultDiv.appendChild(groupDiv);
+  });
 }
