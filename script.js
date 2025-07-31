@@ -37,14 +37,17 @@ function startSpinning() {
   const output = document.getElementById('output');
   output.innerHTML = '';
 
-  // create group boxes with placeholders
+  // Create group boxes with empty placeholders
   for (let i = 0; i < groupCount; i++) {
     const box = document.createElement('div');
     box.className = 'group-box';
     box.id = `group-${i}`;
-    box.innerHTML = `<strong>第 ${i + 1} 组</strong><ul>` +
-      Array.from({ length: perGroup }, () => `<li>🎲</li>`).join('') +
-      `</ul>`;
+    let ul = '<ul>';
+    for (let j = 0; j < perGroup; j++) {
+      ul += `<li id="g${i}-m${j}">🎲</li>`;
+    }
+    ul += '</ul>';
+    box.innerHTML = `<strong>第 ${i + 1} 组</strong>${ul}`;
     output.appendChild(box);
   }
 
@@ -52,15 +55,13 @@ function startSpinning() {
 
   spinInterval = setInterval(() => {
     for (let i = 0; i < groupCount; i++) {
-      const groupBox = document.getElementById(`group-${i}`);
-      const lis = groupBox.getElementsByTagName('li');
-
       for (let j = 0; j < perGroup; j++) {
-        const random = windowEntries[Math.floor(Math.random() * windowEntries.length)];
-        lis[j].textContent = random.name;
+        const randomEntry = windowEntries[Math.floor(Math.random() * windowEntries.length)];
+        const li = document.getElementById(`g${i}-m${j}`);
+        if (li) li.textContent = randomEntry.name;
       }
     }
-  }, 50); // fast update
+  }, 50); // Update every 50ms
 }
 
 function stopSpinning() {
@@ -71,29 +72,18 @@ function stopSpinning() {
 
   const groupCount = parseInt(document.getElementById('groupCount').value);
   const perGroup = parseInt(document.getElementById('perGroup').value);
+  const totalNeeded = groupCount * perGroup;
 
-  // actual final group assignment
-  const entriesCopy = shuffle(windowEntries);
-  const groups = [];
-
+  const finalPool = shuffle(windowEntries).slice(0, totalNeeded);
   let index = 0;
+
   for (let i = 0; i < groupCount; i++) {
-    const group = [];
     for (let j = 0; j < perGroup; j++) {
-      if (index < entriesCopy.length) {
-        group.push(entriesCopy[index++]);
+      const li = document.getElementById(`g${i}-m${j}`);
+      if (li && finalPool[index]) {
+        li.textContent = finalPool[index].name;
+        index++;
       }
     }
-    groups.push(group);
-  }
-
-  finalGroups = groups;
-
-  // update UI with final names
-  for (let i = 0; i < groups.length; i++) {
-    const groupBox = document.getElementById(`group-${i}`);
-    groupBox.innerHTML = `<strong>第 ${i + 1} 组</strong><ul>` +
-      groups[i].map(p => `<li>${p.name}</li>`).join('') +
-      `</ul>`;
   }
 }
