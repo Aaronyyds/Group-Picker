@@ -45,9 +45,8 @@ function stopSpinning() {
     for (let g = 0; g < groupCount; g++) {
       let group = [];
 
-      // Step 1: Ensure first two members collectively cover all 4 traits
+      // Step 1: Ensure first two members cover all 4 traits
       let pairFound = false;
-
       const candidates = windowEntries.map((p, idx) => ({ ...p, idx }))
         .filter(p => !usedIndices.has(p.idx));
 
@@ -58,7 +57,8 @@ function stopSpinning() {
           const roleSet = new Set([p1.role, p2.role]);
           const levelSet = new Set([p1.level, p2.level]);
 
-          if (roleSet.has('buyer') && roleSet.has('sourcing') && levelSet.has('senior') && levelSet.has('junior')) {
+          if (roleSet.has('buyer') && roleSet.has('sourcing') &&
+              levelSet.has('senior') && levelSet.has('junior')) {
             group.push(p1, p2);
             usedIndices.add(p1.idx);
             usedIndices.add(p2.idx);
@@ -72,7 +72,7 @@ function stopSpinning() {
         break;
       }
 
-      // Step 2: Fill the remaining members with 0.8 switch logic
+      // Step 2: Fill the rest using switch logic
       let last = group[group.length - 1];
       while (group.length < perGroup) {
         let expectedRole = Math.random() < 0.8 ? (last.role === 'buyer' ? 'sourcing' : 'buyer') : last.role;
@@ -106,19 +106,6 @@ function stopSpinning() {
       }
 
       if (!success) break;
-
-      // Final safety check
-      const roles = group.map(p => p.role);
-      const levels = group.map(p => p.level);
-      const hasBuyer = roles.includes('buyer');
-      const hasSourcing = roles.includes('sourcing');
-      const hasSenior = levels.includes('senior');
-      const hasJunior = levels.includes('junior');
-
-      if (!(hasBuyer && hasSourcing && hasSenior && hasJunior)) {
-        success = false;
-        break;
-      }
 
       tempGroups.push(group);
     }
