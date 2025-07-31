@@ -1,9 +1,7 @@
 let spinning = false;
+let spinInterval;
 let windowEntries = [];
-let finalGroups = [];
-let spinAnimation;
 
-// Load CSV only once
 fetch('https://aaronyyds.github.io/Group-Picker/sample.csv?nocache=' + new Date().getTime())
   .then(response => response.text())
   .then(data => {
@@ -31,104 +29,85 @@ function startSpinning() {
     return;
   }
 
+  const output = document.getElementById('output');
+  output.innerHTML = '';
+
+  for (let i = 0; i < groupCount; i++) {
+    const box = document.createElement('div');
+    box.className = 'group-box';
+    box.id = `group-${i}`;
+    box.innerHTML = `<strong>第 ${i + 1} 组</strong><ul>${'<li>🎲</li>'.repeat(perGroup)}</ul>`;
+    output.appendChild(box);
+  }
+
   spinning = true;
-  spinLoop();
-}
 
-function stopSpinning() {
-  spinning = false;
-  cancelAnimationFrame(spinAnimation);
-  generateGroups();
-  displayGroups();
-}
+  spinInterval = setInterval(() => {
+    const sourcingPool = windowEntries.filter(p => p.role === 'sourcing');
+    const buyerPool = windowEntries.filter(p => p.role === 'buyer');
 
-function spinLoop() {
-  if (!spinning) return;
-  // Show temporary flashing names
-  const groupBoxes = document.querySelectorAll('.groupBox');
-  groupBoxes.forEach(box => {
-    const random = windowEntries[Math.floor(Math.random() * windowEntries.length)];
-    box.innerText = random.name;
-  });
-  spinAnimation = requestAnimationFrame(spinLoop);
-}
+    const shuffle = arr => [...arr].sort(() => Math.random() - 0.5);
+    let sourcing = shuffle(sourcingPool);
+    let buyer = shuffle(buyerPool);
 
-function generateGroups() {
-  const groupCount = parseInt(document.getElementById('groupCount').value);
-  const perGroup = parseInt(document.getElementById('perGroup').value);
-
-  const sourcing = windowEntries.filter(p => p.role === 'sourcing');
-  const buyer = windowEntries.filter(p => p.role === 'buyer');
-
-  const shuffle = arr => [...arr].sort(() => Math.random() - 0.5);
-
-  for (let attempt = 0; attempt < 1000; attempt++) {
-    let sourcingPool = shuffle(sourcing);
-    let buyerPool = shuffle(buyer);
-    let groups = [];
-    let success = true;
+    const groups = [];
+    let sourcingIndex = 0;
+    let buyerIndex = 0;
+    let enough = true;
 
     for (let i = 0; i < groupCount; i++) {
-      let group = [];
-      let lastRole = '';
-      let lastLevel = '';
+      const group = [];
+      let currentRole = Math.random() < 0.5 ? 'sourcing' : 'buyer';
+      let currentLevel = Math.random() < 0.5 ? 'senior' : 'junior';
 
       for (let j = 0; j < perGroup; j++) {
-        let role = Math.random() < (lastRole === 'sourcing' ? 0.9 : 0.1) ? 'buyer' : 'sourcing';
-        let level = Math.random() < (lastLevel === 'senior' ? 0.8 : 0.2) ? 'junior' : 'senior';
+        let pool = currentRole === 'sourcing' ? sourcing : buyer;
+        let index = currentRole === 'sourcing' ? sourcingIndex : buyerIndex;
 
-        let pool = role === 'sourcing' ? sourcingPool : buyerPool;
-        let index = pool.findIndex(p => p.level === level);
+        let personIndex = pool.findIndex(p => p.level === currentLevel);
 
-        if (index === -1) {
-          index = pool.length ? 0 : -1;
+        if (personIndex === -1) {
+          if (index >= pool.length) { enough = false; break; }
+          personIndex = 0;
         }
 
-        if (index === -1) {
-          group.push({ name: 'Blank', role: role, level: level });
-        } else {
-          let person = pool.splice(index, 1)[0];
-          group.push(person);
-          lastRole = person.role;
-          lastLevel = person.level;
+        const [person] = pool.splice(personIndex, 1);
+        if (!person) { enough = false; break; }
+
+        if (currentRole === 'sourcing') sourcingIndex++;
+        else buyerIndex++;
+
+        group.push(person);
+
+        // 90% chance to switch role
+        if (Math.random() < 0.8) {
+          currentRole = currentRole === 'sourcing' ? 'buyer' : 'sourcing';
+        }
+
+        // 80% chance to switch level
+        if (Math.random() < 0.8) {
+          currentLevel = currentLevel === 'senior' ? 'junior' : 'senior';
         }
       }
 
-      let hasSourcing = group.some(p => p.role === 'sourcing');
-      let hasBuyer = group.some(p => p.role === 'buyer');
-      let hasSenior = group.some(p => p.level === 'senior');
-      let hasJunior = group.some(p => p.level === 'junior');
-
-      if (!hasSourcing || !hasBuyer || !hasSenior || !hasJunior) {
-        success = false;
-        break;
-      }
+      if (!enough) break;
       groups.push(group);
     }
 
-    if (success) {
-      finalGroups = groups;
-      return;
+    if (enough) {
+      for (let i = 0; i < groupCount; i++) {
+        const groupBox = document.getElementById(`group-${i}`);
+        groupBox.innerHTML = `<strong>Group ${i + 1}</strong><ul>${
+          groups[i].map(p => `<li>${p.name}</li>`).join('')
+        }</ul>`;
+      }
     }
+  }, 100);
+}
+
+function stopSpinning() {
+  if (spinning) {
+    clearInterval(spinInterval);
+    spinning = false;
   }
-
-  alert("无法在1000次尝试中生成合适的分组。请检查数据。");
 }
-
-function displayGroups() {
-  const container = document.getElementById('result');
-  container.innerHTML = '';
-
-  finalGroups.forEach((group, i) => {
-    const div = document.createElement('div');
-    div.className = 'groupBox';
-    div.innerHTML = `<strong>Group ${i + 1}</strong><br>` + group.map(p =>
-      `${p.name} (${capitalize(p.role)}, ${capitalize(p.level)})`).join('<br>');
-    container.appendChild(div);
-  });
-}
-
-function capitalize(str) {
-  return str.charAt(0).toUpperCase() + str.slice(1);
-}
-</script>
