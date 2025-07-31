@@ -19,39 +19,7 @@
           .filter(entry => entry.name && entry.role && entry.level);
       });
 
-    function startSpinning() {
-      const groupCount = parseInt(document.getElementById('groupCount').value);
-      const perGroup = parseInt(document.getElementById('perGroup').value);
-      const output = document.getElementById('output');
-      output.innerHTML = '';
-
-      for (let i = 0; i < groupCount; i++) {
-        const box = document.createElement('div');
-        box.className = 'group-box';
-        box.id = `group-${i}`;
-        let ul = '<ul>';
-        for (let j = 0; j < perGroup; j++) {
-          ul += `<li id="g${i}-m${j}">🎲</li>`;
-        }
-        ul += '</ul>';
-        box.innerHTML = `<strong>第 ${i + 1} 组</strong>${ul}`;
-        output.appendChild(box);
-      }
-
-      spinning = true;
-
-      spinInterval = setInterval(() => {
-        for (let i = 0; i < groupCount; i++) {
-          for (let j = 0; j < perGroup; j++) {
-            const randomEntry = windowEntries[Math.floor(Math.random() * windowEntries.length)];
-            const li = document.getElementById(`g${i}-m${j}`);
-            if (li) li.textContent = randomEntry.name;
-          }
-        }
-      }, 50);
-    }
-
-   function stopSpinning() {
+function stopSpinning() {
   if (!spinning) return;
 
   clearInterval(spinInterval);
@@ -86,7 +54,7 @@
           const roles = new Set([p1.role, p2.role]);
           const levels = new Set([p1.level, p2.level]);
 
-          if (roles.size === 2 && levels.size === 2) {
+          if (roles.has('buyer') && roles.has('sourcing') && levels.has('senior') && levels.has('junior')) {
             group.push(p1, p2);
             usedIndices.add(p1.idx);
             usedIndices.add(p2.idx);
