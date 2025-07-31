@@ -90,8 +90,8 @@ function stopSpinning() {
       const group = [];
 
       for (let m = 0; m < perGroup; m++) {
-        let role = Math.random() < 0.9 ? (lastRole === 'buyer' ? 'sourcing' : 'buyer') : lastRole;
-        let level = Math.random() < 0.8 ? (lastLevel === 'junior' ? 'senior' : 'junior') : lastLevel;
+        let role = Math.random() < 0.95 ? (lastRole === 'buyer' ? 'sourcing' : 'buyer') : lastRole;
+        let level = Math.random() < 0.95 ? (lastLevel === 'junior' ? 'senior' : 'junior') : lastLevel;
 
         const candidateIdx = windowEntries.findIndex((p, idx) =>
           !usedIndices.has(idx) &&
