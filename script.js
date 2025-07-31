@@ -72,7 +72,6 @@ function stopSpinning() {
   while (finalGroups.length < groupCount && attempt++ < maxAttempts) {
     const tempGroups = [];
     let usedIndices = new Set();
-
     let success = true;
 
     for (let g = 0; g < groupCount; g++) {
@@ -89,14 +88,12 @@ function stopSpinning() {
           .filter(p => !usedIndices.has(p.idx) && p.role === expectedRole && p.level === expectedLevel);
 
         if (candidates.length === 0) {
-          // Try relaxing to just expectedRole
           candidates = windowEntries
             .map((p, idx) => ({ ...p, idx }))
             .filter(p => !usedIndices.has(p.idx) && p.role === expectedRole);
         }
 
         if (candidates.length === 0) {
-          // Fallback: pick any remaining
           candidates = windowEntries
             .map((p, idx) => ({ ...p, idx }))
             .filter(p => !usedIndices.has(p.idx));
@@ -115,6 +112,20 @@ function stopSpinning() {
       }
 
       if (!success) break;
+
+      // Validate the group has at least 1 Buyer, 1 Sourcing, 1 Senior, 1 Junior
+      const roles = group.map(p => p.role);
+      const levels = group.map(p => p.level);
+      const hasBuyer = roles.includes('buyer');
+      const hasSourcing = roles.includes('sourcing');
+      const hasSenior = levels.includes('senior');
+      const hasJunior = levels.includes('junior');
+
+      if (!(hasBuyer && hasSourcing && hasSenior && hasJunior)) {
+        success = false;
+        break;
+      }
+
       tempGroups.push(group);
     }
 
