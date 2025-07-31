@@ -3,24 +3,24 @@ let spinning = false;
 let spinInterval;
 
 fetch('https://aaronyyds.github.io/Group-Picker/sample.csv?nocache=' + new Date().getTime())
-.then(response => response.text())
-.then(data => {
-windowEntries = data
-.split('\n')
-.slice(1)
-.map(line => {
-const [name, role, level] = line.split(',');
-return {
-name: name?.trim(),
-role: role?.trim().toLowerCase(),
-level: level?.trim().toLowerCase()
-};
-})
-.filter(entry => entry.name && entry.role && entry.level);
-});
+  .then(response => response.text())
+  .then(data => {
+    windowEntries = data
+      .split('\n')
+      .slice(1)
+      .map(line => {
+        const [name, role, level] = line.split(',');
+        return {
+          name: name?.trim(),
+          role: role?.trim().toLowerCase(),
+          level: level?.trim().toLowerCase()
+        };
+      })
+      .filter(entry => entry.name && entry.role && entry.level);
+  });
 
 function shuffle(arr) {
-return [...arr].sort(() => Math.random() - 0.5);
+  return [...arr].sort(() => Math.random() - 0.5);
 }
 
 function startSpinning() {
@@ -72,58 +72,31 @@ function stopSpinning() {
   while (finalGroups.length < groupCount && attempt++ < maxAttempts) {
     const tempGroups = [];
     let usedIndices = new Set();
+
     let success = true;
 
     for (let g = 0; g < groupCount; g++) {
       let group = [];
+      let localLastRole = Math.random() < 0.5 ? 'buyer' : 'sourcing';
+      let localLastLevel = Math.random() < 0.5 ? 'junior' : 'senior';
 
-      // Step 1: Ensure first 2 members together have all 4 traits
-      let pairFound = false;
-      const candidates = windowEntries.map((p, idx) => ({ ...p, idx }))
-        .filter(p => !usedIndices.has(p.idx) && p.name.toLowerCase() !== 'blank');
-
-      for (let i = 0; i < candidates.length && !pairFound; i++) {
-        for (let j = i + 1; j < candidates.length && !pairFound; j++) {
-          const p1 = candidates[i];
-          const p2 = candidates[j];
-
-          const roles = new Set([p1.role, p2.role]);
-          const levels = new Set([p1.level, p2.level]);
-
-          if (roles.size === 2 && levels.size === 2) {
-            group.push(p1, p2);
-            usedIndices.add(p1.idx);
-            usedIndices.add(p2.idx);
-            pairFound = true;
-          }
-        }
-      }
-
-      if (!pairFound) {
-        success = false;
-        break;
-      }
-
-      // Step 2: Fill remaining group members using 0.8 switch logic
-      let last = group[group.length - 1];
-      while (group.length < perGroup) {
-        let expectedRole = Math.random() < 0.8 ? (last.role === 'buyer' ? 'sourcing' : 'buyer') : last.role;
-        let expectedLevel = Math.random() < 0.8 ? (last.level === 'junior' ? 'senior' : 'junior') : last.level;
+      for (let m = 0; m < perGroup; m++) {
+        let expectedRole = Math.random() < 0.8 ? (localLastRole === 'buyer' ? 'sourcing' : 'buyer') : localLastRole;
+        let expectedLevel = Math.random() < 0.8 ? (localLastLevel === 'junior' ? 'senior' : 'junior') : localLastLevel;
 
         let candidates = windowEntries
           .map((p, idx) => ({ ...p, idx }))
-          .filter(p =>
-            !usedIndices.has(p.idx) &&
-            (p.role === expectedRole && p.level === expectedLevel)
-          );
+          .filter(p => !usedIndices.has(p.idx) && p.role === expectedRole && p.level === expectedLevel);
 
         if (candidates.length === 0) {
+          // Try relaxing to just expectedRole
           candidates = windowEntries
             .map((p, idx) => ({ ...p, idx }))
             .filter(p => !usedIndices.has(p.idx) && p.role === expectedRole);
         }
 
         if (candidates.length === 0) {
+          // Fallback: pick any remaining
           candidates = windowEntries
             .map((p, idx) => ({ ...p, idx }))
             .filter(p => !usedIndices.has(p.idx));
@@ -135,9 +108,10 @@ function stopSpinning() {
         }
 
         const chosen = candidates[Math.floor(Math.random() * candidates.length)];
-        group.push(chosen);
         usedIndices.add(chosen.idx);
-        last = chosen;
+        group.push(chosen);
+        localLastRole = chosen.role;
+        localLastLevel = chosen.level;
       }
 
       if (!success) break;
