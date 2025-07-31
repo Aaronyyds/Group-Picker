@@ -1,57 +1,61 @@
-    let windowEntries = [];
-    let spinning = false;
-    let spinInterval;
+let windowEntries = [];
+let spinning = false;
+let spinInterval;
 
-    // Load CSV data
-    fetch('https://aaronyyds.github.io/Group-Picker/sample.csv?nocache=' + new Date().getTime())
-      .then(response => response.text())
-      .then(data => {
-        windowEntries = data
-          .split('\n')
-          .slice(1)
-          .map(line => {
-            const [name, role, level] = line.split(',');
-            return {
-              name: name?.trim(),
-              role: role?.trim().toLowerCase(),
-              level: level?.trim().toLowerCase()
-            };
-          })
-          .filter(entry => entry.name && entry.role && entry.level);
-        document.getElementById('startBtn').disabled = false;
-      });
+// Load CSV data
+fetch('https://aaronyyds.github.io/Group-Picker/sample.csv?nocache=' + new Date().getTime())
+  .then(response => response.text())
+  .then(data => {
+    windowEntries = data
+      .split('\n')
+      .slice(1)
+      .map(line => {
+        const [name, role, level] = line.split(',');
+        return {
+          name: name?.trim(),
+          role: role?.trim().toLowerCase(),
+          level: level?.trim().toLowerCase()
+        };
+      })
+      .filter(entry => entry.name && entry.role && entry.level);
+    document.getElementById('startBtn').disabled = false;
+  });
 
-    function startSpinning() {
-      const groupCount = parseInt(document.getElementById('groupCount').value);
-      const perGroup = parseInt(document.getElementById('perGroup').value);
-      const output = document.getElementById('output');
-      output.innerHTML = '';
+function shuffle(arr) {
+  return [...arr].sort(() => Math.random() - 0.5);
+}
 
-      for (let i = 0; i < groupCount; i++) {
-        const box = document.createElement('div');
-        box.className = 'group-box';
-        box.id = `group-${i}`;
-        let ul = '<ul>';
-        for (let j = 0; j < perGroup; j++) {
-          ul += `<li id="g${i}-m${j}">🎲</li>`;
-        }
-        ul += '</ul>';
-        box.innerHTML = `<strong>第 ${i + 1} 组</strong>${ul}`;
-        output.appendChild(box);
-      }
+function startSpinning() {
+  const groupCount = parseInt(document.getElementById('groupCount').value);
+  const perGroup = parseInt(document.getElementById('perGroup').value);
+  const output = document.getElementById('output');
+  output.innerHTML = '';
 
-      spinning = true;
-
-      spinInterval = setInterval(() => {
-        for (let i = 0; i < groupCount; i++) {
-          for (let j = 0; j < perGroup; j++) {
-            const randomEntry = windowEntries[Math.floor(Math.random() * windowEntries.length)];
-            const li = document.getElementById(`g${i}-m${j}`);
-            if (li) li.textContent = randomEntry.name;
-          }
-        }
-      }, 50);
+  for (let i = 0; i < groupCount; i++) {
+    const box = document.createElement('div');
+    box.className = 'group-box';
+    box.id = `group-${i}`;
+    let ul = '<ul>';
+    for (let j = 0; j < perGroup; j++) {
+      ul += `<li id="g${i}-m${j}">🎲</li>`;
     }
+    ul += '</ul>';
+    box.innerHTML = `<strong>第 ${i + 1} 组</strong>${ul}`;
+    output.appendChild(box);
+  }
+
+  spinning = true;
+
+  spinInterval = setInterval(() => {
+    for (let i = 0; i < groupCount; i++) {
+      for (let j = 0; j < perGroup; j++) {
+        const randomEntry = windowEntries[Math.floor(Math.random() * windowEntries.length)];
+        const li = document.getElementById(`g${i}-m${j}`);
+        if (li) li.textContent = randomEntry.name;
+      }
+    }
+  }, 50);
+}
 
 function stopSpinning() {
   if (!spinning) return;
@@ -69,11 +73,10 @@ function stopSpinning() {
 
   while (finalGroups.length < groupCount && attempt++ < maxAttempts) {
     const tempGroups = [];
-    let usedIndices = new Set();
+    let usedPeople = new Set();
     let success = true;
 
-    // Shuffle once per attempt
-    const shuffledEntries = shuffle(windowEntries).map((p, idx) => ({ ...p, idx }));
+    const shuffledEntries = shuffle(windowEntries);
 
     for (let g = 0; g < groupCount; g++) {
       let group = [];
@@ -81,7 +84,7 @@ function stopSpinning() {
       // Step 1: Ensure first 2 members have all 4 traits: 1 Buyer + 1 Sourcing, 1 Senior + 1 Junior
       let pairFound = false;
 
-      const candidates = shuffledEntries.filter(p => !usedIndices.has(p.idx));
+      const candidates = shuffledEntries.filter(p => !usedPeople.has(p));
 
       for (let i = 0; i < candidates.length && !pairFound; i++) {
         for (let j = i + 1; j < candidates.length && !pairFound; j++) {
@@ -93,8 +96,8 @@ function stopSpinning() {
 
           if (roles.size === 2 && levels.size === 2) {
             group.push(p1, p2);
-            usedIndices.add(p1.idx);
-            usedIndices.add(p2.idx);
+            usedPeople.add(p1);
+            usedPeople.add(p2);
             pairFound = true;
           }
         }
@@ -111,21 +114,20 @@ function stopSpinning() {
         let expectedRole = Math.random() < 0.8 ? (last.role === 'buyer' ? 'sourcing' : 'buyer') : last.role;
         let expectedLevel = Math.random() < 0.8 ? (last.level === 'junior' ? 'senior' : 'junior') : last.level;
 
-        let candidates = shuffledEntries
-          .filter(p =>
-            !usedIndices.has(p.idx) &&
-            p.role === expectedRole &&
-            p.level === expectedLevel
-          );
+        let candidates = shuffledEntries.filter(p =>
+          !usedPeople.has(p) &&
+          p.role === expectedRole &&
+          p.level === expectedLevel
+        );
 
         if (candidates.length === 0) {
-          candidates = shuffledEntries
-            .filter(p => !usedIndices.has(p.idx) && p.role === expectedRole);
+          candidates = shuffledEntries.filter(p =>
+            !usedPeople.has(p) && p.role === expectedRole
+          );
         }
 
         if (candidates.length === 0) {
-          candidates = shuffledEntries
-            .filter(p => !usedIndices.has(p.idx));
+          candidates = shuffledEntries.filter(p => !usedPeople.has(p));
         }
 
         if (candidates.length === 0) {
@@ -135,7 +137,7 @@ function stopSpinning() {
 
         const chosen = candidates[Math.floor(Math.random() * candidates.length)];
         group.push(chosen);
-        usedIndices.add(chosen.idx);
+        usedPeople.add(chosen);
         last = chosen;
       }
 
@@ -154,10 +156,18 @@ function stopSpinning() {
     return;
   }
 
+  // Update DOM with final result
   for (let i = 0; i < groupCount; i++) {
     for (let j = 0; j < perGroup; j++) {
       const li = document.getElementById(`g${i}-m${j}`);
       li.textContent = finalGroups[i][j]?.name || 'BLANK';
     }
+  }
+
+  // Optional: log duplicates (should now be empty)
+  const allNames = finalGroups.flat().map(p => p.name);
+  const duplicates = allNames.filter((name, idx, arr) => arr.indexOf(name) !== idx);
+  if (duplicates.length > 0) {
+    console.warn("⚠️ Duplicates detected:", [...new Set(duplicates)]);
   }
 }
