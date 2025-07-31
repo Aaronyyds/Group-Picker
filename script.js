@@ -19,110 +19,113 @@
           .filter(entry => entry.name && entry.role && entry.level);
       });
 
-function stopSpinning() {
-  if (!spinning) return;
+    function startSpinning() {
+      const groupCount = parseInt(document.getElementById('groupCount').value);
+      const perGroup = parseInt(document.getElementById('perGroup').value);
+      const output = document.getElementById('output');
+      output.innerHTML = '';
 
-  clearInterval(spinInterval);
-  spinning = false;
+      for (let i = 0; i < groupCount; i++) {
+        const box = document.createElement('div');
+        box.className = 'group-box';
+        box.id = `group-${i}`;
+        let ul = '<ul>';
+        for (let j = 0; j < perGroup; j++) {
+          ul += `<li id="g${i}-m${j}">🎲</li>`;
+        }
+        ul += '</ul>';
+        box.innerHTML = `<strong>第 ${i + 1} 组</strong>${ul}`;
+        output.appendChild(box);
+      }
 
-  const groupCount = parseInt(document.getElementById('groupCount').value);
-  const perGroup = parseInt(document.getElementById('perGroup').value);
-  const totalNeeded = groupCount * perGroup;
+      spinning = true;
 
-  let finalGroups = [];
-  let attempt = 0;
-  const maxAttempts = 1000;
-
-  while (finalGroups.length < groupCount && attempt++ < maxAttempts) {
-    const tempGroups = [];
-    let usedIndices = new Set();
-    let success = true;
-
-    for (let g = 0; g < groupCount; g++) {
-      let group = [];
-
-      // Step 1: Pick first 2 members with all 4 traits (role & level)
-      let pairFound = false;
-      const candidates = windowEntries.map((p, idx) => ({ ...p, idx }))
-        .filter(p => !usedIndices.has(p.idx) && p.name.toLowerCase() !== 'blank');
-
-      for (let i = 0; i < candidates.length && !pairFound; i++) {
-        for (let j = i + 1; j < candidates.length && !pairFound; j++) {
-          const p1 = candidates[i];
-          const p2 = candidates[j];
-
-          const roles = new Set([p1.role, p2.role]);
-          const levels = new Set([p1.level, p2.level]);
-
-          if (roles.size === 2 && levels.size === 2) {
-            group.push(p1, p2);
-            usedIndices.add(p1.idx);
-            usedIndices.add(p2.idx);
-            pairFound = true;
+      spinInterval = setInterval(() => {
+        for (let i = 0; i < groupCount; i++) {
+          for (let j = 0; j < perGroup; j++) {
+            const randomEntry = windowEntries[Math.floor(Math.random() * windowEntries.length)];
+            const li = document.getElementById(`g${i}-m${j}`);
+            if (li) li.textContent = randomEntry.name;
           }
         }
-      }
+      }, 50);
+    }
 
-      if (!pairFound) {
-        success = false;
-        break;
-      }
+    function stopSpinning() {
+      if (!spinning) return;
 
-      // Step 2: Fill rest of group with 0.8 switch logic
-      let last = group[group.length - 1];
-      while (group.length < perGroup) {
-        let expectedRole = Math.random() < 0.8 ? (last.role === 'buyer' ? 'sourcing' : 'buyer') : last.role;
-        let expectedLevel = Math.random() < 0.8 ? (last.level === 'junior' ? 'senior' : 'junior') : last.level;
+      clearInterval(spinInterval);
+      spinning = false;
 
-        let candidates = windowEntries
-          .map((p, idx) => ({ ...p, idx }))
-          .filter(p =>
-            !usedIndices.has(p.idx) &&
-            (p.role === expectedRole && p.level === expectedLevel)
-          );
+      const groupCount = parseInt(document.getElementById('groupCount').value);
+      const perGroup = parseInt(document.getElementById('perGroup').value);
+      const totalNeeded = groupCount * perGroup;
 
-        if (candidates.length === 0) {
-          candidates = windowEntries
-            .map((p, idx) => ({ ...p, idx }))
-            .filter(p => !usedIndices.has(p.idx) && p.role === expectedRole);
+      let finalGroups = [];
+      let attempt = 0;
+      const maxAttempts = 1000;
+
+      while (finalGroups.length < groupCount && attempt++ < maxAttempts) {
+        const tempGroups = [];
+        let usedIndices = new Set();
+        let success = true;
+
+        for (let g = 0; g < groupCount; g++) {
+          let group = [];
+          let localLastRole = Math.random() < 0.5 ? 'buyer' : 'sourcing';
+          let localLastLevel = Math.random() < 0.5 ? 'junior' : 'senior';
+
+          for (let m = 0; m < perGroup; m++) {
+            let expectedRole = Math.random() < 0.8 ? (localLastRole === 'buyer' ? 'sourcing' : 'buyer') : localLastRole;
+            let expectedLevel = Math.random() < 0.8 ? (localLastLevel === 'junior' ? 'senior' : 'junior') : localLastLevel;
+
+            let candidates = windowEntries
+              .map((p, idx) => ({ ...p, idx }))
+              .filter(p => !usedIndices.has(p.idx) && p.role === expectedRole && p.level === expectedLevel);
+
+            if (candidates.length === 0) {
+              candidates = windowEntries
+                .map((p, idx) => ({ ...p, idx }))
+                .filter(p => !usedIndices.has(p.idx) && p.role === expectedRole);
+            }
+
+            if (candidates.length === 0) {
+              candidates = windowEntries
+                .map((p, idx) => ({ ...p, idx }))
+                .filter(p => !usedIndices.has(p.idx));
+            }
+
+            if (candidates.length === 0) {
+              success = false;
+              break;
+            }
+
+            const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+            usedIndices.add(chosen.idx);
+            group.push(chosen);
+            localLastRole = chosen.role;
+            localLastLevel = chosen.level;
+          }
+
+          if (!success) break;
+          tempGroups.push(group);
         }
 
-        if (candidates.length === 0) {
-          candidates = windowEntries
-            .map((p, idx) => ({ ...p, idx }))
-            .filter(p => !usedIndices.has(p.idx));
-        }
-
-        if (candidates.length === 0) {
-          success = false;
+        if (success) {
+          finalGroups = tempGroups;
           break;
         }
-
-        const chosen = candidates[Math.floor(Math.random() * candidates.length)];
-        group.push(chosen);
-        usedIndices.add(chosen.idx);
-        last = chosen;
       }
 
-      if (!success) break;
-      tempGroups.push(group);
-    }
+      if (finalGroups.length !== groupCount) {
+        alert("生成分组失败，请检查样本数据是否足够多样。");
+        return;
+      }
 
-    if (success) {
-      finalGroups = tempGroups;
-      break;
+      for (let i = 0; i < groupCount; i++) {
+        for (let j = 0; j < perGroup; j++) {
+          const li = document.getElementById(`g${i}-m${j}`);
+          li.textContent = finalGroups[i][j]?.name || 'BLANK';
+        }
+      }
     }
-  }
-
-  if (finalGroups.length !== groupCount) {
-    alert("生成分组失败，请检查样本数据是否足够多样。");
-    return;
-  }
-
-  for (let i = 0; i < groupCount; i++) {
-    for (let j = 0; j < perGroup; j++) {
-      const li = document.getElementById(`g${i}-m${j}`);
-      li.textContent = finalGroups[i][j]?.name || 'BLANK';
-    }
-  }
-}
