@@ -1,7 +1,9 @@
 let spinning = false;
 let spinInterval;
 let windowEntries = [];
+let finalGroups = [];
 
+// Load CSV
 fetch('https://aaronyyds.github.io/Group-Picker/sample.csv?nocache=' + new Date().getTime())
   .then(response => response.text())
   .then(data => {
@@ -19,6 +21,40 @@ fetch('https://aaronyyds.github.io/Group-Picker/sample.csv?nocache=' + new Date(
       .filter(entry => entry.name && entry.role && entry.level);
   });
 
+// Generate all groups at once
+function generateFinalGroups(groupCount, perGroup) {
+  const sourcingPool = windowEntries.filter(p => p.role === 'sourcing');
+  const buyerPool = windowEntries.filter(p => p.role === 'buyer');
+  let sourcing = [...sourcingPool].sort(() => Math.random() - 0.5);
+  let buyer = [...buyerPool].sort(() => Math.random() - 0.5);
+
+  const groups = [];
+
+  for (let i = 0; i < groupCount; i++) {
+    const group = [];
+    let role = Math.random() < 0.5 ? 'sourcing' : 'buyer';
+    let level = Math.random() < 0.5 ? 'senior' : 'junior';
+
+    for (let j = 0; j < perGroup; j++) {
+      let pool = role === 'sourcing' ? sourcing : buyer;
+      let personIndex = pool.findIndex(p => p.level === level);
+      if (personIndex === -1) personIndex = 0;
+
+      const [person] = pool.splice(personIndex, 1);
+      if (!person) break;
+
+      group.push(person);
+
+      if (Math.random() < 0.9) role = role === 'sourcing' ? 'buyer' : 'sourcing';
+      if (Math.random() < 0.8) level = level === 'senior' ? 'junior' : 'senior';
+    }
+
+    groups.push(group);
+  }
+
+  return groups;
+}
+
 function startSpinning() {
   const groupCount = parseInt(document.getElementById('groupCount').value);
   const perGroup = parseInt(document.getElementById('perGroup').value);
@@ -29,9 +65,10 @@ function startSpinning() {
     return;
   }
 
+  finalGroups = generateFinalGroups(groupCount, perGroup);
+
   const output = document.getElementById('output');
   output.innerHTML = '';
-
   for (let i = 0; i < groupCount; i++) {
     const box = document.createElement('div');
     box.className = 'group-box';
@@ -41,73 +78,26 @@ function startSpinning() {
   }
 
   spinning = true;
-
   spinInterval = setInterval(() => {
-    const sourcingPool = windowEntries.filter(p => p.role === 'sourcing');
-    const buyerPool = windowEntries.filter(p => p.role === 'buyer');
-
-    const shuffle = arr => [...arr].sort(() => Math.random() - 0.5);
-    let sourcing = shuffle(sourcingPool);
-    let buyer = shuffle(buyerPool);
-
-    const groups = [];
-    let sourcingIndex = 0;
-    let buyerIndex = 0;
-    let enough = true;
-
     for (let i = 0; i < groupCount; i++) {
-      const group = [];
-      let currentRole = Math.random() < 0.5 ? 'sourcing' : 'buyer';
-      let currentLevel = Math.random() < 0.5 ? 'senior' : 'junior';
-
-      for (let j = 0; j < perGroup; j++) {
-        let pool = currentRole === 'sourcing' ? sourcing : buyer;
-        let index = currentRole === 'sourcing' ? sourcingIndex : buyerIndex;
-
-        let personIndex = pool.findIndex(p => p.level === currentLevel);
-
-        if (personIndex === -1) {
-          if (index >= pool.length) { enough = false; break; }
-          personIndex = 0;
-        }
-
-        const [person] = pool.splice(personIndex, 1);
-        if (!person) { enough = false; break; }
-
-        if (currentRole === 'sourcing') sourcingIndex++;
-        else buyerIndex++;
-
-        group.push(person);
-
-        // 90% chance to switch role
-        if (Math.random() < 0.8) {
-          currentRole = currentRole === 'sourcing' ? 'buyer' : 'sourcing';
-        }
-
-        // 80% chance to switch level
-        if (Math.random() < 0.8) {
-          currentLevel = currentLevel === 'senior' ? 'junior' : 'senior';
-        }
-      }
-
-      if (!enough) break;
-      groups.push(group);
-    }
-
-    if (enough) {
-      for (let i = 0; i < groupCount; i++) {
-        const groupBox = document.getElementById(`group-${i}`);
-        groupBox.innerHTML = `<strong>Group ${i + 1}</strong><ul>${
-          groups[i].map(p => `<li>${p.name}</li>`).join('')
-        }</ul>`;
-      }
+      const box = document.getElementById(`group-${i}`);
+      const lis = box.querySelectorAll('li');
+      lis.forEach(li => {
+        li.textContent = ['🎲', '💫', '✨', '🎯'][Math.floor(Math.random() * 4)];
+      });
     }
   }, 100);
 }
 
 function stopSpinning() {
-  if (spinning) {
-    clearInterval(spinInterval);
-    spinning = false;
+  if (!spinning) return;
+  clearInterval(spinInterval);
+  spinning = false;
+
+  for (let i = 0; i < finalGroups.length; i++) {
+    const groupBox = document.getElementById(`group-${i}`);
+    groupBox.innerHTML = `<strong>第 ${i + 1} 组</strong><ul>${
+      finalGroups[i].map(p => `<li>${p.name}</li>`).join('')
+    }</ul>`;
   }
 }
