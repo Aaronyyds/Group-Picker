@@ -1,23 +1,23 @@
-let windowEntries = [];
-let spinning = false;
-let spinInterval;
+    let windowEntries = [];
+    let spinning = false;
+    let spinInterval;
 
-fetch('https://aaronyyds.github.io/Group-Picker/sample.csv?nocache=' + new Date().getTime())
-.then(response => response.text())
-.then(data => {
-windowEntries = data
-.split('\n')
-.slice(1)
-.map(line => {
-const [name, role, level] = line.split(',');
-return {
-name: name?.trim(),
-role: role?.trim().toLowerCase(),
-level: level?.trim().toLowerCase()
-};
-})
-.filter(entry => entry.name && entry.role && entry.level);
-});
+    fetch('https://aaronyyds.github.io/Group-Picker/sample.csv?nocache=' + new Date().getTime())
+      .then(response => response.text())
+      .then(data => {
+        windowEntries = data
+          .split('\n')
+          .slice(1)
+          .map(line => {
+            const [name, role, level] = line.split(',');
+            return {
+              name: name?.trim(),
+              role: role?.trim().toLowerCase(),
+              level: level?.trim().toLowerCase()
+            };
+          })
+          .filter(entry => entry.name && entry.role && entry.level);
+      });
 
     function startSpinning() {
       const groupCount = parseInt(document.getElementById('groupCount').value);
@@ -51,85 +51,81 @@ level: level?.trim().toLowerCase()
       }, 50);
     }
 
-   function stopSpinning() {
-function stopSpinning() {
-if (!spinning) return;
+    function stopSpinning() {
+      if (!spinning) return;
 
-clearInterval(spinInterval);
-@@ -86,75 +54,75 @@
-const roles = new Set([p1.role, p2.role]);
-const levels = new Set([p1.level, p2.level]);
+      clearInterval(spinInterval);
+      spinning = false;
 
-          if (roles.size === 2 && levels.size === 2) {
-          if (roles.has('buyer') && roles.has('sourcing') && levels.has('senior') && levels.has('junior')) {
-group.push(p1, p2);
-usedIndices.add(p1.idx);
-usedIndices.add(p2.idx);
-pairFound = true;
-}
-}
-}
+      const groupCount = parseInt(document.getElementById('groupCount').value);
+      const perGroup = parseInt(document.getElementById('perGroup').value);
+      const totalNeeded = groupCount * perGroup;
 
-if (!pairFound) {
-success = false;
-break;
-}
+      let finalGroups = [];
+      let attempt = 0;
+      const maxAttempts = 1000;
 
-// Step 2: Fill remaining group members using 0.8 switch logic
-let last = group[group.length - 1];
-while (group.length < perGroup) {
-let expectedRole = Math.random() < 0.8 ? (last.role === 'buyer' ? 'sourcing' : 'buyer') : last.role;
-let expectedLevel = Math.random() < 0.8 ? (last.level === 'junior' ? 'senior' : 'junior') : last.level;
+      while (finalGroups.length < groupCount && attempt++ < maxAttempts) {
+        const tempGroups = [];
+        let usedIndices = new Set();
+        let success = true;
 
-let candidates = windowEntries
-.map((p, idx) => ({ ...p, idx }))
-.filter(p =>
-!usedIndices.has(p.idx) &&
-(p.role === expectedRole && p.level === expectedLevel)
-);
+        for (let g = 0; g < groupCount; g++) {
+          let group = [];
+          let localLastRole = Math.random() < 0.5 ? 'buyer' : 'sourcing';
+          let localLastLevel = Math.random() < 0.5 ? 'junior' : 'senior';
 
-if (candidates.length === 0) {
-candidates = windowEntries
-.map((p, idx) => ({ ...p, idx }))
-.filter(p => !usedIndices.has(p.idx) && p.role === expectedRole);
-}
+          for (let m = 0; m < perGroup; m++) {
+            let expectedRole = Math.random() < 0.8 ? (localLastRole === 'buyer' ? 'sourcing' : 'buyer') : localLastRole;
+            let expectedLevel = Math.random() < 0.8 ? (localLastLevel === 'junior' ? 'senior' : 'junior') : localLastLevel;
 
-if (candidates.length === 0) {
-candidates = windowEntries
-.map((p, idx) => ({ ...p, idx }))
-.filter(p => !usedIndices.has(p.idx));
-}
+            let candidates = windowEntries
+              .map((p, idx) => ({ ...p, idx }))
+              .filter(p => !usedIndices.has(p.idx) && p.role === expectedRole && p.level === expectedLevel);
 
-if (candidates.length === 0) {
-success = false;
-break;
-}
+            if (candidates.length === 0) {
+              candidates = windowEntries
+                .map((p, idx) => ({ ...p, idx }))
+                .filter(p => !usedIndices.has(p.idx) && p.role === expectedRole);
+            }
 
-const chosen = candidates[Math.floor(Math.random() * candidates.length)];
-group.push(chosen);
-usedIndices.add(chosen.idx);
-last = chosen;
-}
+            if (candidates.length === 0) {
+              candidates = windowEntries
+                .map((p, idx) => ({ ...p, idx }))
+                .filter(p => !usedIndices.has(p.idx));
+            }
 
-if (!success) break;
-tempGroups.push(group);
-}
+            if (candidates.length === 0) {
+              success = false;
+              break;
+            }
 
-if (success) {
-finalGroups = tempGroups;
-break;
-}
-}
+            const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+            usedIndices.add(chosen.idx);
+            group.push(chosen);
+            localLastRole = chosen.role;
+            localLastLevel = chosen.level;
+          }
 
-if (finalGroups.length !== groupCount) {
-alert("生成分组失败，请检查样本数据是否足够多样。");
-return;
-}
+          if (!success) break;
+          tempGroups.push(group);
+        }
 
-for (let i = 0; i < groupCount; i++) {
-for (let j = 0; j < perGroup; j++) {
-const li = document.getElementById(`g${i}-m${j}`);
-li.textContent = finalGroups[i][j]?.name || 'BLANK';
-}
-}
-}
+        if (success) {
+          finalGroups = tempGroups;
+          break;
+        }
+      }
+
+      if (finalGroups.length !== groupCount) {
+        alert("生成分组失败，请检查样本数据是否足够多样。");
+        return;
+      }
+
+      for (let i = 0; i < groupCount; i++) {
+        for (let j = 0; j < perGroup; j++) {
+          const li = document.getElementById(`g${i}-m${j}`);
+          li.textContent = finalGroups[i][j]?.name || 'BLANK';
+        }
+      }
+    }
