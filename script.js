@@ -79,10 +79,12 @@ function startSpinning() {
 
         group.push(person);
 
+        // 90% chance to switch role
         if (Math.random() < 0.9) {
           currentRole = currentRole === 'sourcing' ? 'buyer' : 'sourcing';
         }
 
+        // 80% chance to switch level
         if (Math.random() < 0.8) {
           currentLevel = currentLevel === 'senior' ? 'junior' : 'senior';
         }
