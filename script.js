@@ -71,9 +71,9 @@ function stopSpinning() {
   let attempt = 0;
   const maxAttempts = 1000;
 
-  while (finalGroups.length < groupCount && attempt++ < maxAttempts) {
-    const tempGroups = [];
-    let usedPeople = new Set();
+  while (attempt++ < maxAttempts) {
+    let tempGroups = [];
+    let usedNames = new Set();
     let success = true;
 
     const shuffledEntries = shuffle(windowEntries);
@@ -81,53 +81,49 @@ function stopSpinning() {
     for (let g = 0; g < groupCount; g++) {
       let group = [];
 
-      // Step 1: Ensure first 2 members have all 4 traits: 1 Buyer + 1 Sourcing, 1 Senior + 1 Junior
-      let pairFound = false;
+      // Step 1: Find two initial members with different role and level
+      let firstTwoPicked = false;
+      const candidates = shuffledEntries.filter(p => !usedNames.has(p.name));
 
-      const candidates = shuffledEntries.filter(p => !usedPeople.has(p));
-
-      for (let i = 0; i < candidates.length && !pairFound; i++) {
-        for (let j = i + 1; j < candidates.length && !pairFound; j++) {
-          const p1 = candidates[i];
-          const p2 = candidates[j];
-
-          const roles = new Set([p1.role, p2.role]);
-          const levels = new Set([p1.level, p2.level]);
-
-          if (roles.size === 2 && levels.size === 2) {
-            group.push(p1, p2);
-            usedPeople.add(p1);
-            usedPeople.add(p2);
-            pairFound = true;
+      for (let i = 0; i < candidates.length && !firstTwoPicked; i++) {
+        for (let j = i + 1; j < candidates.length && !firstTwoPicked; j++) {
+          const a = candidates[i];
+          const b = candidates[j];
+          if (a.role !== b.role && a.level !== b.level) {
+            group.push(a, b);
+            usedNames.add(a.name);
+            usedNames.add(b.name);
+            firstTwoPicked = true;
           }
         }
       }
 
-      if (!pairFound) {
+      if (!firstTwoPicked) {
         success = false;
         break;
       }
 
-      // Step 2: Fill remaining group members using 0.8 switch logic
+      // Step 2: Fill remaining with switch logic
       let last = group[group.length - 1];
       while (group.length < perGroup) {
-        let expectedRole = Math.random() < 0.8 ? (last.role === 'buyer' ? 'sourcing' : 'buyer') : last.role;
-        let expectedLevel = Math.random() < 0.8 ? (last.level === 'junior' ? 'senior' : 'junior') : last.level;
+        const expectedRole = Math.random() < 0.8 ? (last.role === 'buyer' ? 'sourcing' : 'buyer') : last.role;
+        const expectedLevel = Math.random() < 0.8 ? (last.level === 'junior' ? 'senior' : 'junior') : last.level;
 
         let candidates = shuffledEntries.filter(p =>
-          !usedPeople.has(p) &&
+          !usedNames.has(p.name) &&
           p.role === expectedRole &&
           p.level === expectedLevel
         );
 
         if (candidates.length === 0) {
           candidates = shuffledEntries.filter(p =>
-            !usedPeople.has(p) && p.role === expectedRole
+            !usedNames.has(p.name) &&
+            p.role === expectedRole
           );
         }
 
         if (candidates.length === 0) {
-          candidates = shuffledEntries.filter(p => !usedPeople.has(p));
+          candidates = shuffledEntries.filter(p => !usedNames.has(p.name));
         }
 
         if (candidates.length === 0) {
@@ -135,10 +131,10 @@ function stopSpinning() {
           break;
         }
 
-        const chosen = candidates[Math.floor(Math.random() * candidates.length)];
-        group.push(chosen);
-        usedPeople.add(chosen);
-        last = chosen;
+        const selected = candidates[Math.floor(Math.random() * candidates.length)];
+        group.push(selected);
+        usedNames.add(selected.name);
+        last = selected;
       }
 
       if (!success) break;
@@ -156,18 +152,10 @@ function stopSpinning() {
     return;
   }
 
-  // Update DOM with final result
   for (let i = 0; i < groupCount; i++) {
     for (let j = 0; j < perGroup; j++) {
       const li = document.getElementById(`g${i}-m${j}`);
       li.textContent = finalGroups[i][j]?.name || 'BLANK';
     }
-  }
-
-  // Optional: log duplicates (should now be empty)
-  const allNames = finalGroups.flat().map(p => p.name);
-  const duplicates = allNames.filter((name, idx, arr) => arr.indexOf(name) !== idx);
-  if (duplicates.length > 0) {
-    console.warn("⚠️ Duplicates detected:", [...new Set(duplicates)]);
   }
 }
