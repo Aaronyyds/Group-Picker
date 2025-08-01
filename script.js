@@ -40,7 +40,7 @@ function startSpinning() {
       ul += `<li id="g${i}-m${j}">🎲</li>`;
     }
     ul += '</ul>';
-    box.innerHTML = `<strong>第 ${i + 1} 组</strong>${ul}`;
+    box.innerHTML = `<strong>Group ${i + 1} </strong>${ul}`;
     output.appendChild(box);
   }
 
